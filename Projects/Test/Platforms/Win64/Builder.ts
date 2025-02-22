@@ -33,7 +33,7 @@ const COMPILER_FLAGS = [
     `-DWIN32_LEAN_AND_MEAN`,
     `-DSTRICT`,
     `-DUNICODE`,
-    `-DNDEBUG`
+    `-DNDEBUG`,
 ];
 
 const LINKER_FLAGS = [
@@ -48,12 +48,12 @@ const LINKER_FLAGS = [
     `-Wl,/merge:.xdata=.rdata`,
     `-Wl,/merge:.pdata=.rdata`,
     `-Wl,/merge:.rdata=.text`,
-    `-Wl,/merge:.data=.text`
+    `-Wl,/merge:.data=.text`,
 ];
 
 const OUTPUT_FLAGS = [
     `-o`,
-    OUTPUT_PATH
+    OUTPUT_PATH,
 ];
 
 async function findSourceFiles(dir: string): Promise<string[]>
@@ -107,7 +107,7 @@ async function build()
         ...COMPILER_FLAGS,
         ...sourceFiles,
         ...LINKER_FLAGS,
-        ...OUTPUT_FLAGS  // Changed here
+        ...OUTPUT_FLAGS,
     ];
 
     await executeCommand(COMPILER_PATH, args);
