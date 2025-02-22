@@ -51,7 +51,10 @@ const LINKER_FLAGS = [
     `-Wl,/merge:.data=.text`
 ];
 
-const OUTPUT_FLAGS = [`-o`, OUTPUT_PATH];
+const OUTPUT_FLAGS = [
+    `-o`,
+    OUTPUT_PATH
+];
 
 async function findSourceFiles(dir: string): Promise<string[]>
 {
