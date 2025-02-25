@@ -1,9 +1,6 @@
 #pragma once
 #include <MinLib.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wreturn-type-c-linkage"
-
 extern "C" { namespace Aiva::WinApi
 {
     void* __stdcall GetStdHandle(MinLib::uint32_t const);
@@ -11,5 +8,3 @@ extern "C" { namespace Aiva::WinApi
     void __stdcall ExitProcess(MinLib::uint32_t const);
 }}
 // extern "C" namespace Aiva::WinApi
-
-#pragma GCC diagnostic pop
