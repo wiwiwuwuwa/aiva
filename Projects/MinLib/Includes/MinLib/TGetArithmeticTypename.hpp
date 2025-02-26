@@ -5,6 +5,6 @@
 namespace Aiva::MinLib
 {
     template <EArithmeticSign Sign, EArithmeticSize Size, EArithmeticType Type>
-    struct TGetArithmeticTypename : public TTypeIdentity<decltype(TGetDefaultArithmeticTypenameValue<Sign, Size, Type>())> {};
+    struct TGetArithmeticTypename : public TTypeIdentity<decltype(TGetDefaultArithmeticTypenameValueF<Sign, Size, Type>())> {};
 }
 // namespace Aiva::MinLib
