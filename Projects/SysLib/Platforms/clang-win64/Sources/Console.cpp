@@ -12,7 +12,7 @@ void Console::WriteToOutput_Impl(char const*const value)
 {
     const auto handle = GetStdHandle(StdHandleType::Output);
 
-    uint32_t written{};
+    auto written = uint32_t{};
     WriteFile(handle, value, GetStringLength(value), &written, nullptr);
 }
 
@@ -20,6 +20,6 @@ void Console::WriteToError_Impl(char const*const value)
 {
     const auto handle = GetStdHandle(StdHandleType::Error);
 
-    uint32_t written{};
+    auto written = uint32_t{};
     WriteFile(handle, value, GetStringLength(value), &written, nullptr);
 }
