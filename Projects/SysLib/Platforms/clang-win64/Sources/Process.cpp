@@ -1,6 +1,6 @@
 #include <SysLib/Process.hpp>
 #include <WinApi.hpp>
-#include "ErrorCode.hpp"
+#include "ErrorCodeUtils.hpp"
 
 using namespace Aiva;
 using namespace WinApi;
