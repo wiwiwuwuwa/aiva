@@ -30,5 +30,15 @@ namespace Aiva::MinLib
 
         return max;
     }
+
+    constexpr uint32_t GetStringLength(char const*const string)
+    {
+        uint32_t length{};
+
+        while (string[length] != '\0')
+            length++;
+
+        return length;
+    }
 }
 // namespace Aiva::MinLib
