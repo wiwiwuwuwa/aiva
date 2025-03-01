@@ -1,5 +1,5 @@
 import * as path from `path`;
-import * as builder from `../../../Builder/Builder`;
+import * as builder from `../../../../Scripts/Builder`;
 
 builder.buildExe
 ({
