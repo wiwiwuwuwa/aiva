@@ -5,7 +5,7 @@ async function findSourceFiles(dir: string): Promise<string[]>
 {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     const results: string[] = [];
-    const allowedExtensions = [`.h`, `.hpp`, `.cpp`, `.c`];
+    const allowedExtensions = [`.h`, `.hpp`, `.cpp`, `.c`, `.inl`, `.ts`];
 
     for (const entry of entries)
     {
@@ -23,7 +23,7 @@ async function findSourceFiles(dir: string): Promise<string[]>
 
 async function main(): Promise<void>
 {
-    let sourcesPaths = [ path.join(__dirname, `..`, `Resources`, `llm.cpp`) ];
+    let sourcesPaths = [ path.join(__dirname, `..`, `Resources`, `llm.txt`) ];
 
     if (process.argv[2])
         sourcesPaths.push
@@ -37,7 +37,7 @@ async function main(): Promise<void>
             ...await findSourceFiles(path.join(__dirname, `..`, `Scripts`)),
         );
 
-    const outputPath = path.join(__dirname, `..`, `Resources`, `cal.cpp`);
+    const outputPath = path.join(__dirname, `..`, `Resources`, `cal.txt`);
     await fs.writeFile(outputPath, ``);
 
     for (const sourcePath of sourcesPaths)

@@ -1,9 +1,11 @@
 #pragma once
 
+#include "MinLib/Algorithm.hpp"
 #include "MinLib/ArithmeticTypes.hpp"
 #include "MinLib/EArithmeticSign.hpp"
 #include "MinLib/EArithmeticSize.hpp"
 #include "MinLib/EArithmeticType.hpp"
+#include "MinLib/StaticString.hpp"
 #include "MinLib/TBoolConstant.hpp"
 #include "MinLib/TGetArithmeticSign.hpp"
 #include "MinLib/TGetArithmeticSize.hpp"

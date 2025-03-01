@@ -6,9 +6,9 @@ using namespace WinApi;
 
 extern "C" void Main()
 {
-    const char msg[] = "Hello World!\n";
+    constexpr auto const msg = StaticString<32>{"Hello World!\n"};
     void *hStdOut = GetStdHandle(-11);
     uint32_t written;
-    WriteFile(hStdOut, msg, sizeof(msg) - 1, &written, nullptr);
+    WriteFile(hStdOut, msg, msg.GetLength(), &written, nullptr);
     ExitProcess(0);
 }
