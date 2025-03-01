@@ -3,6 +3,9 @@
 
 extern "C" { namespace Aiva::WinApi
 {
+    constexpr const uint32_t INVALID_HANDLE_VALUE = static_cast<uint32_t>(-1);
+    constexpr const uint32_t ERROR_SUCCESS = 0;
+
     enum class StdHandleType : uint32_t
     {
         Output = static_cast<uint32_t>(-11),

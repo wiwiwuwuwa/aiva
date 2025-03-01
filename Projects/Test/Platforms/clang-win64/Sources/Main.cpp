@@ -6,4 +6,5 @@ using namespace SysLib;
 extern "C" void Main()
 {
     Console::WriteToOutput("Hello World!\n");
+    Process::Exit(ErrorCode::Success);
 }

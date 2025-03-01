@@ -2,7 +2,7 @@ import * as fs from `fs/promises`;
 import * as path from `path`;
 import * as child_process from `child_process`;
 
-async function executeCommand(command: string, args: string[]): Promise<void>
+export async function executeCommand(command: string, args: string[] = []): Promise<void>
 {
     await new Promise((resolve, reject) =>
     {
@@ -23,7 +23,7 @@ async function executeCommand(command: string, args: string[]): Promise<void>
     });
 }
 
-async function findSourceFiles(dir: string): Promise<string[]>
+export async function findSourceFiles(dir: string): Promise<string[]>
 {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     const results: string[] = [];
