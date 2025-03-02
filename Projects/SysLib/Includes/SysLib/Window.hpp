@@ -10,7 +10,6 @@ namespace Aiva::SysLib
         ~Window();
 
         operator bool() const;
-        void WaitUntilClosed() const;
 
     private:
         uint32_t m_handle{};

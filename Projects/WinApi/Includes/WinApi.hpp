@@ -14,7 +14,26 @@ extern "C" { namespace Aiva::WinApi
     constexpr const uint32_t SW_SHOWNORMAL = 1;
     constexpr const uint32_t CW_USEDEFAULT = 0x80000000;
 
+    constexpr const uint32_t WS_OVERLAPPEDWINDOW = 0x000000CF;
+
     using WNDPROC = int64_t(__stdcall*)(void* /*hWnd*/, uint32_t /*uMsg*/, uint64_t /*wParam*/, int64_t /*lParam*/);
+
+    struct POINT final
+    {
+        int32_t x{};
+        int32_t y{};
+    };
+
+    struct MSG final
+    {
+        void* hwnd{};
+        uint32_t message{};
+        uint64_t wParam{};
+        int64_t lParam{};
+        uint32_t time{};
+        POINT pt{};
+        uint32_t lPrivate{};
+    };
 
     struct WNDCLASSEXW final
 	{
@@ -32,13 +51,19 @@ extern "C" { namespace Aiva::WinApi
 		void* hIconSm{};
 	};
 
-    void* __stdcall CreateWindowExW(uint32_t exStyle, wchar_t const* className, wchar_t const* windowName, uint32_t style, uint32_t x, uint32_t y, uint32_t width, uint32_t height, void* parentWindow, void* menu, void* instance, void* param);
+    void* __stdcall CreateWindowExW(uint32_t exStyle, wchar_t const* className, wchar_t const* windowName, uint32_t style, int32_t x, int32_t y, int32_t width, int32_t height, void* parentWindow, void* menu, void* instance, void* param);
 
     int64_t __stdcall DefWindowProcW(void* hWnd, uint32_t uMsg, uint64_t wParam, int64_t lParam);
 
     int32_t __stdcall DestroyWindow(void* hWnd);
 
+    int32_t __stdcall DispatchMessageW(MSG const*const lpMsg);
+
     int32_t __stdcall GetClassInfoExW(void* hInstance, wchar_t const* lpszClass, WNDCLASSEXW* lpwcx);
+
+    uint32_t __stdcall GetLastError();
+
+    int32_t __stdcall GetMessageW(MSG *const msg, void *const hWnd, uint32_t const wMsgFilterMin, uint32_t const wMsgFilterMax);
 
     void* __stdcall GetModuleHandleW(wchar_t const* moduleName);
 
@@ -53,6 +78,8 @@ extern "C" { namespace Aiva::WinApi
     int32_t __stdcall ShowWindow(void* hWnd, int32_t nCmdShow);
 
     void __stdcall Sleep(uint32_t const dwMilliseconds);
+
+    int32_t __stdcall TranslateMessage(MSG const*const lpMsg);
 
     int32_t __stdcall UnregisterClassW(wchar_t const* lpClassName, void* hInstance);
 

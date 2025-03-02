@@ -1,5 +1,6 @@
 #include <SysLib/Window.hpp>
 #include <WinApi.hpp>
+#include <SysLib/Console.hpp>
 
 using namespace Aiva;
 using namespace MinLib;
@@ -44,12 +45,6 @@ Window::operator bool() const
 	return m_handle;
 }
 
-void Window::WaitUntilClosed() const
-{
-	while (IsWindow(GMainWindowHandle))
-        Sleep(100);
-}
-
 namespace
 {
     void InitMainWindow(uint32_t const width, uint32_t const height)
@@ -75,7 +70,7 @@ namespace
                 /*dwExStyle*/ {},
                 /*lpClassName*/ L"Aiva::SysLib::Window",
                 /*lpWindowName*/ L"Aiva Window",
-                /*dwStyle*/ 0x10CF0000,
+                /*dwStyle*/ WS_OVERLAPPEDWINDOW,
                 /*X*/ 0,
                 /*Y*/ 0,
                 /*nWidth*/ width,
