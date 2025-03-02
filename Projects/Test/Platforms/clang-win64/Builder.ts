@@ -20,6 +20,7 @@ export async function build()
         libraries:
         [
             `SysLib`,
+            `user32`,
             `kernel32`,
         ],
         outputPath: path.join(__dirname, `Binaries`, `Test.exe`),

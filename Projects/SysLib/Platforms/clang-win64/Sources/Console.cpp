@@ -10,7 +10,7 @@ using namespace SysLib;
 
 void Console::WriteToOutput_Impl(char const*const value)
 {
-    const auto handle = GetStdHandle(StdHandleType::Output);
+    const auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     auto written = uint32_t{};
     WriteFile(handle, value, GetStringLength(value), &written, nullptr);
@@ -18,7 +18,7 @@ void Console::WriteToOutput_Impl(char const*const value)
 
 void Console::WriteToError_Impl(char const*const value)
 {
-    const auto handle = GetStdHandle(StdHandleType::Error);
+    const auto handle = GetStdHandle(STD_ERROR_HANDLE);
 
     auto written = uint32_t{};
     WriteFile(handle, value, GetStringLength(value), &written, nullptr);
