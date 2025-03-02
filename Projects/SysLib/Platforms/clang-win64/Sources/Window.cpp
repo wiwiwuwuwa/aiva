@@ -1,6 +1,5 @@
 #include <SysLib/Window.hpp>
 #include <WinApi.hpp>
-#include <SysLib/Console.hpp>
 
 using namespace Aiva;
 using namespace MinLib;
@@ -69,7 +68,7 @@ namespace
             (
                 /*dwExStyle*/ {},
                 /*lpClassName*/ L"Aiva::SysLib::Window",
-                /*lpWindowName*/ L"Aiva Window",
+                /*lpWindowName*/ L"Window",
                 /*dwStyle*/ WS_OVERLAPPEDWINDOW,
                 /*X*/ 0,
                 /*Y*/ 0,

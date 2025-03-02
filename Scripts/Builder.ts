@@ -89,12 +89,6 @@ export async function buildExe
         `-Wl,/entry:Main`,
         `-Wl,/subsystem:console`,
         `-Wl,/nodefaultlib`,
-        `-Wl,/merge:.idata=.rdata`,
-        `-Wl,/merge:.edata=.rdata`,
-        `-Wl,/merge:.xdata=.rdata`,
-        `-Wl,/merge:.pdata=.rdata`,
-        `-Wl,/merge:.rdata=.text`,
-        `-Wl,/merge:.data=.text`,
         `-o`,
         outputPath,
     ]);
