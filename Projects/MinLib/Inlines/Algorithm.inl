@@ -1,5 +1,5 @@
 #pragma once
-#include "../Includes/MinLib/Algorithm.hpp"
+#include <MinLib/Algorithm.hpp>
 
 namespace Aiva::MinLib
 {

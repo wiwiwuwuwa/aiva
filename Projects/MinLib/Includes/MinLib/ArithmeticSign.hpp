@@ -2,7 +2,7 @@
 
 namespace Aiva::MinLib
 {
-    enum class EArithmeticSign
+    enum class ArithmeticSign
     {
         Signed,
         Unsigned,

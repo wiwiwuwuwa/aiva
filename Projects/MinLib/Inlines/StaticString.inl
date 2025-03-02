@@ -1,6 +1,6 @@
 #pragma once
-#include "../Includes/MinLib/StaticString.hpp"
-#include "../Includes/MinLib/Algorithm.hpp"
+#include <MinLib/StaticString.hpp>
+#include <MinLib/Algorithm.hpp>
 
 namespace Aiva::MinLib
 {
@@ -16,7 +16,7 @@ namespace Aiva::MinLib
         if (!string)
             { m_data[0] = '\0'; return; }
 
-            uintptr_t i{};
+        uintptr_t i{};
 
         for (; i < Size - 1 && string[i] != '\0'; i++)
             m_data[i] = string[i];

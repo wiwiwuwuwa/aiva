@@ -3,7 +3,7 @@
 namespace Aiva::MinLib
 {
     template<typename T, T value>
-    struct TIntegralConstant
+    struct IntegralConstant
     {
         static constexpr const T Value = value;
     };

@@ -2,10 +2,10 @@
 
 namespace Aiva::MinLib
 {
-    enum class EArithmeticType
+    template<typename T>
+    struct TypeIdentity
     {
-        Integral,
-        Floating,
+        using Type = T;
     };
 }
 // namespace Aiva::MinLib

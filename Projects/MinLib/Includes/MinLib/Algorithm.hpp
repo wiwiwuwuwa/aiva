@@ -1,5 +1,5 @@
 #pragma once
-#include "ArithmeticTypes.hpp"
+#include <MinLib/ArithmeticTypes.hpp>
 
 namespace Aiva::MinLib
 {

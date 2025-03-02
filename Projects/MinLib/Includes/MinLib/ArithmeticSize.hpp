@@ -2,7 +2,7 @@
 
 namespace Aiva::MinLib
 {
-    enum class EArithmeticSize
+    enum class ArithmeticSize
     {
         Byte1,
         Byte2,

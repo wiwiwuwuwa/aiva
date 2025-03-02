@@ -1,23 +1,23 @@
 #pragma once
-#include "TGetArithmeticTypename.hpp"
-#include "TToArithmeticSize.hpp"
+#include <MinLib/GetArithmeticTypename.hpp>
+#include <MinLib/ToArithmeticSize.hpp>
 
 namespace Aiva::MinLib
 {
-    using int8_t = TGetArithmeticTypename<EArithmeticSign::Signed, EArithmeticSize::Byte1, EArithmeticType::Integral>::Type;
-    using int16_t = TGetArithmeticTypename<EArithmeticSign::Signed, EArithmeticSize::Byte2, EArithmeticType::Integral>::Type;
-    using int32_t = TGetArithmeticTypename<EArithmeticSign::Signed, EArithmeticSize::Byte4, EArithmeticType::Integral>::Type;
-    using int64_t = TGetArithmeticTypename<EArithmeticSign::Signed, EArithmeticSize::Byte8, EArithmeticType::Integral>::Type;
+    using int8_t = GetArithmeticTypename<ArithmeticSign::Signed, ArithmeticSize::Byte1, ArithmeticType::Integral>::Type;
+    using int16_t = GetArithmeticTypename<ArithmeticSign::Signed, ArithmeticSize::Byte2, ArithmeticType::Integral>::Type;
+    using int32_t = GetArithmeticTypename<ArithmeticSign::Signed, ArithmeticSize::Byte4, ArithmeticType::Integral>::Type;
+    using int64_t = GetArithmeticTypename<ArithmeticSign::Signed, ArithmeticSize::Byte8, ArithmeticType::Integral>::Type;
 
-    using uint8_t = TGetArithmeticTypename<EArithmeticSign::Unsigned, EArithmeticSize::Byte1, EArithmeticType::Integral>::Type;
-    using uint16_t = TGetArithmeticTypename<EArithmeticSign::Unsigned, EArithmeticSize::Byte2, EArithmeticType::Integral>::Type;
-    using uint32_t = TGetArithmeticTypename<EArithmeticSign::Unsigned, EArithmeticSize::Byte4, EArithmeticType::Integral>::Type;
-    using uint64_t = TGetArithmeticTypename<EArithmeticSign::Unsigned, EArithmeticSize::Byte8, EArithmeticType::Integral>::Type;
+    using uint8_t = GetArithmeticTypename<ArithmeticSign::Unsigned, ArithmeticSize::Byte1, ArithmeticType::Integral>::Type;
+    using uint16_t = GetArithmeticTypename<ArithmeticSign::Unsigned, ArithmeticSize::Byte2, ArithmeticType::Integral>::Type;
+    using uint32_t = GetArithmeticTypename<ArithmeticSign::Unsigned, ArithmeticSize::Byte4, ArithmeticType::Integral>::Type;
+    using uint64_t = GetArithmeticTypename<ArithmeticSign::Unsigned, ArithmeticSize::Byte8, ArithmeticType::Integral>::Type;
 
-    using float32_t = TGetArithmeticTypename<EArithmeticSign::Signed, EArithmeticSize::Byte4, EArithmeticType::Floating>::Type;
-    using float64_t = TGetArithmeticTypename<EArithmeticSign::Signed, EArithmeticSize::Byte8, EArithmeticType::Floating>::Type;
+    using float32_t = GetArithmeticTypename<ArithmeticSign::Signed, ArithmeticSize::Byte4, ArithmeticType::Floating>::Type;
+    using float64_t = GetArithmeticTypename<ArithmeticSign::Signed, ArithmeticSize::Byte8, ArithmeticType::Floating>::Type;
 
-    using intptr_t = TGetArithmeticTypename<EArithmeticSign::Signed, TToArithmeticSize<sizeof(void*)>::Value, EArithmeticType::Integral>::Type;
-    using uintptr_t = TGetArithmeticTypename<EArithmeticSign::Unsigned, TToArithmeticSize<sizeof(void*)>::Value, EArithmeticType::Integral>::Type;
+    using intptr_t = GetArithmeticTypename<ArithmeticSign::Signed, ToArithmeticSize<sizeof(void*)>::Value, ArithmeticType::Integral>::Type;
+    using uintptr_t = GetArithmeticTypename<ArithmeticSign::Unsigned, ToArithmeticSize<sizeof(void*)>::Value, ArithmeticType::Integral>::Type;
 }
 // namespace Aiva::MinLib
