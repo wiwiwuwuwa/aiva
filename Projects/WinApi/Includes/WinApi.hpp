@@ -3,12 +3,12 @@
 
 extern "C" { namespace Aiva::WinApi
 {
-    constexpr const uint32_t INVALID_HANDLE_VALUE = static_cast<uint32_t>(-1);
+    constexpr const uint32_t INVALID_HANDLE_VALUE = uint32_t(-1);
     constexpr const uint32_t ERROR_SUCCESS = 0;
 
-    constexpr const uint32_t STD_INPUT_HANDLE = static_cast<uint32_t>(-10);
-    constexpr const uint32_t STD_OUTPUT_HANDLE = static_cast<uint32_t>(-11);
-    constexpr const uint32_t STD_ERROR_HANDLE = static_cast<uint32_t>(-12);
+    constexpr const uint32_t STD_INPUT_HANDLE = uint32_t(-10);
+    constexpr const uint32_t STD_OUTPUT_HANDLE = uint32_t(-11);
+    constexpr const uint32_t STD_ERROR_HANDLE = uint32_t(-12);
 
     constexpr const uint32_t SW_HIDE = 0;
     constexpr const uint32_t SW_SHOWNORMAL = 1;

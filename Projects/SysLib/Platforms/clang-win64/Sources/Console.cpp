@@ -1,7 +1,7 @@
 #include <SysLib/Console.hpp>
 #include <MinLib/Algorithm.hpp>
-#include <MinLib/ArithmeticTypes.hpp>
 #include <WinApi.hpp>
+#include <SysLib/ArithmeticTypes.hpp>
 
 using namespace Aiva;
 using namespace MinLib;
@@ -10,7 +10,7 @@ using namespace SysLib;
 
 void Console::WriteToOutput_Impl(char const*const value)
 {
-    const auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    auto const handle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     auto written = uint32_t{};
     WriteFile(handle, value, GetStringLength(value), &written, nullptr);
@@ -18,7 +18,7 @@ void Console::WriteToOutput_Impl(char const*const value)
 
 void Console::WriteToError_Impl(char const*const value)
 {
-    const auto handle = GetStdHandle(STD_ERROR_HANDLE);
+    auto const handle = GetStdHandle(STD_ERROR_HANDLE);
 
     auto written = uint32_t{};
     WriteFile(handle, value, GetStringLength(value), &written, nullptr);
