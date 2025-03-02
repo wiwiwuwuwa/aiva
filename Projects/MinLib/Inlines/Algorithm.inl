@@ -31,9 +31,9 @@ namespace Aiva::MinLib
         return max;
     }
 
-    constexpr uint32_t GetStringLength(char const*const string)
+    constexpr uintptr_t GetStringLength(char const*const string)
     {
-        uint32_t length{};
+        auto length = uintptr_t{};
 
         while (string[length] != '\0')
             length++;

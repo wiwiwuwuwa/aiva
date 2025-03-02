@@ -6,12 +6,12 @@ namespace Aiva::SysLib
     class Window final
     {
     public:
-        Window(uint32_t const width, uint32_t const height);
+        Window(uintptr_t const width, uintptr_t const height);
         ~Window();
 
         operator bool() const;
 
     private:
-        uint32_t m_handle{};
+        uintptr_t m_handle{};
     };
 }

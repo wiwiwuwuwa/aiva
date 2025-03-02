@@ -9,8 +9,8 @@ namespace Aiva::MinLib
     template <typename Type, typename... Types>
     constexpr Type Max(Type const& value, Types const&... values);
 
-    constexpr uint32_t GetStringLength(char const*const string);
+    constexpr uintptr_t GetStringLength(char const*const string);
 }
 // namespace Aiva::MinLib
 
-#include "../../Sources/Algorithm.inl"
+#include "../../Inlines/Algorithm.inl"

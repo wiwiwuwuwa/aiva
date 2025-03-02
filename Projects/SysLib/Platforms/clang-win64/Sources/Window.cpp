@@ -8,17 +8,17 @@ using namespace SysLib;
 
 namespace
 {
-    constexpr const uint32_t INVALID_WINDOW_HANDLE = 0;
-    constexpr const uint32_t MAIN_WINDOW_HANDLE = 1;
+    constexpr const uintptr_t INVALID_WINDOW_HANDLE = 0;
+    constexpr const uintptr_t MAIN_WINDOW_HANDLE = 1;
 
     void* GMainWindowHandle = nullptr;
 
-    void InitMainWindow(uint32_t const width, uint32_t const height);
+    void InitMainWindow(uintptr_t const width, uintptr_t const height);
     void ShutMainWindow();
 }
 // namespace
 
-Window::Window(uint32_t const width, uint32_t const height)
+Window::Window(uintptr_t const width, uintptr_t const height)
 {
     if (IsWindow(GMainWindowHandle))
         { m_handle = INVALID_WINDOW_HANDLE; return; }
@@ -46,7 +46,7 @@ Window::operator bool() const
 
 namespace
 {
-    void InitMainWindow(uint32_t const width, uint32_t const height)
+    void InitMainWindow(uintptr_t const width, uintptr_t const height)
     {
         auto tmp = WNDCLASSEXW{};
 

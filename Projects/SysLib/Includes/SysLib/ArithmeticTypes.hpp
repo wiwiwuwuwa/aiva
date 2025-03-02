@@ -15,5 +15,8 @@ namespace Aiva::SysLib
 
     using float32_t = MinLib::float32_t;
     using float64_t = MinLib::float64_t;
+
+    using intptr_t = MinLib::intptr_t;
+    using uintptr_t = MinLib::uintptr_t;
 }
 // namespace Aiva::SysLib

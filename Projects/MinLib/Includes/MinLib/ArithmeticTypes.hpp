@@ -1,5 +1,6 @@
 #pragma once
 #include "TGetArithmeticTypename.hpp"
+#include "TToArithmeticSize.hpp"
 
 namespace Aiva::MinLib
 {
@@ -15,5 +16,8 @@ namespace Aiva::MinLib
 
     using float32_t = TGetArithmeticTypename<EArithmeticSign::Signed, EArithmeticSize::Byte4, EArithmeticType::Floating>::Type;
     using float64_t = TGetArithmeticTypename<EArithmeticSign::Signed, EArithmeticSize::Byte8, EArithmeticType::Floating>::Type;
+
+    using intptr_t = TGetArithmeticTypename<EArithmeticSign::Signed, TToArithmeticSize<sizeof(void*)>::Value, EArithmeticType::Integral>::Type;
+    using uintptr_t = TGetArithmeticTypename<EArithmeticSign::Unsigned, TToArithmeticSize<sizeof(void*)>::Value, EArithmeticType::Integral>::Type;
 }
 // namespace Aiva::MinLib
