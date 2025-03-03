@@ -8,36 +8,46 @@ using namespace SysLib;
 
 namespace
 {
-    constexpr const uintptr_t INVALID_WINDOW_HANDLE = 0;
-    constexpr const uintptr_t MAIN_WINDOW_HANDLE = 1;
+    constexpr const uintptr_t INVALID_WINDOW_HANDLE{};
+    uintptr_t GNumActiveWindows{};
 
-    void* GMainWindowHandle = nullptr;
+    void InitWindowSystem();
+    void ShutWindowSystem();
 
-    void InitMainWindow(uintptr_t const width, uintptr_t const height);
-    void CenterMainWindow();
-    void ShutMainWindow();
+    uintptr_t CreateWindow(uintptr_t const width, uintptr_t const height);
+    void CenterWindow(uintptr_t const windowHandle);
+    void RemoveWindow(uintptr_t const windowHandle);
 }
 // namespace
 
 Window::Window(uintptr_t const width, uintptr_t const height)
 {
-    if (IsWindow(GMainWindowHandle))
-        { m_handle = INVALID_WINDOW_HANDLE; return; }
+    if (!GNumActiveWindows)
+        InitWindowSystem();
 
-    InitMainWindow(width, height);
+    m_handle = CreateWindow(width, height);
+    if (!m_handle)
+        return;
 
-    if (IsWindow(GMainWindowHandle))
-        { m_handle = MAIN_WINDOW_HANDLE; return; }
-
-    m_handle = INVALID_WINDOW_HANDLE;
+    CenterWindow(m_handle);
+    GNumActiveWindows++;
 }
 
 Window::~Window()
 {
-    if (m_handle == INVALID_WINDOW_HANDLE)
+    if (!m_handle)
         return;
 
-    ShutMainWindow();
+    RemoveWindow(m_handle);
+    m_handle = INVALID_WINDOW_HANDLE;
+
+    if (!GNumActiveWindows)
+        return;
+
+    GNumActiveWindows--;
+
+    if (!GNumActiveWindows)
+        ShutWindowSystem();
 }
 
 Window::operator bool() const
@@ -47,65 +57,51 @@ Window::operator bool() const
 
 namespace
 {
-    void InitMainWindow(uintptr_t const width, uintptr_t const height)
+    void InitWindowSystem()
     {
-        auto tmp = WNDCLASSEXW{};
+        WNDCLASSEXW windowClass{};
+        windowClass.cbSize = sizeof(WNDCLASSEXW);
+        windowClass.lpfnWndProc = DefWindowProcW;
+        windowClass.hInstance = GetModuleHandleW(nullptr);
+        windowClass.lpszClassName = L"Aiva::SysLib::Window";
 
-        if (!GetClassInfoExW(GetModuleHandleW(nullptr), L"Aiva::SysLib::Window", &tmp))
-        {
-            WNDCLASSEXW windowClass{};
-            windowClass.cbSize = sizeof(WNDCLASSEXW);
-            windowClass.lpfnWndProc = DefWindowProcW;
-            windowClass.hInstance = GetModuleHandleW(nullptr);
-            windowClass.lpszClassName = L"Aiva::SysLib::Window";
-
-            if (RegisterClassExW(&windowClass) == 0)
-                return;
-        }
-
-        if (!IsWindow(GMainWindowHandle))
-        {
-            GMainWindowHandle = CreateWindowExW
-            (
-                /*dwExStyle*/ {},
-                /*lpClassName*/ L"Aiva::SysLib::Window",
-                /*lpWindowName*/ L"Window",
-                /*dwStyle*/ WS_OVERLAPPEDWINDOW,
-                /*X*/ 0,
-                /*Y*/ 0,
-                /*nWidth*/ width,
-                /*nHeight*/ height,
-                /*hWndParent*/ nullptr,
-                /*hMenu*/ nullptr,
-                /*hInstance*/ GetModuleHandleW(nullptr),
-                /*lpParam*/ nullptr
-            );
-
-            if (GMainWindowHandle == nullptr)
-                return;
-        }
-
-        if (!IsWindowVisible(GMainWindowHandle))
-        {
-            const auto result = ShowWindow(GMainWindowHandle, SW_SHOWNORMAL);
-
-            if (result != 0)
-                return;
-        }
-
-        CenterMainWindow();
+        RegisterClassExW(&windowClass);
     }
 
-    void CenterMainWindow()
+    void ShutWindowSystem()
     {
-        if (!IsWindow(GMainWindowHandle))
+        UnregisterClassW(L"Aiva::SysLib::Window", GetModuleHandleW(nullptr));
+    }
+
+    uintptr_t CreateWindow(uintptr_t const width, uintptr_t const height)
+    {
+        return (uintptr_t)CreateWindowExW
+        (
+            /*dwExStyle*/ {},
+            /*lpClassName*/ L"Aiva::SysLib::Window",
+            /*lpWindowName*/ L"Window",
+            /*dwStyle*/ WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+            /*X*/ 0,
+            /*Y*/ 0,
+            /*nWidth*/ width,
+            /*nHeight*/ height,
+            /*hWndParent*/ nullptr,
+            /*hMenu*/ nullptr,
+            /*hInstance*/ GetModuleHandleW(nullptr),
+            /*lpParam*/ nullptr
+        );
+    }
+
+    void CenterWindow(uintptr_t const windowHandle)
+    {
+        if (!IsWindow((void*)windowHandle))
             return;
 
         auto windowRect = RECT{};
-        if (!GetWindowRect(GMainWindowHandle, &windowRect))
+        if (!GetWindowRect((void*)windowHandle, &windowRect))
             return;
 
-        auto const monitor = MonitorFromWindow(GMainWindowHandle, MONITOR_DEFAULTTONEAREST);
+        auto const monitor = MonitorFromWindow((void*)windowHandle, MONITOR_DEFAULTTONEAREST);
         if (!monitor)
             return;
 
@@ -119,7 +115,7 @@ namespace
 
         SetWindowPos
         (
-            /*hWnd*/ GMainWindowHandle,
+            /*hWnd*/ (void*)windowHandle,
             /*hWndInsertAfter*/ HWND_TOP,
             /*X*/ posX,
             /*Y*/ posY,
@@ -129,17 +125,11 @@ namespace
         );
     }
 
-    void ShutMainWindow()
+    void RemoveWindow(uintptr_t const windowHandle)
     {
-        auto tmp = WNDCLASSEXW{};
+        if (!IsWindow((void*)windowHandle))
+            return;
 
-        if (IsWindowVisible(GMainWindowHandle))
-            ShowWindow(GMainWindowHandle, SW_HIDE);
-
-        if (IsWindow(GMainWindowHandle))
-            DestroyWindow(GMainWindowHandle);
-
-        if (GetClassInfoExW(GetModuleHandleW(nullptr), L"Aiva::SysLib::Window", &tmp))
-            UnregisterClassW(L"Aiva::SysLib::Window", GetModuleHandleW(nullptr));
+        DestroyWindow((void*)windowHandle);
     }
 }

@@ -29,6 +29,8 @@ extern "C" { namespace Aiva::WinApi
 
     constexpr const uint32_t WS_OVERLAPPEDWINDOW = 207;
 
+    constexpr const uint32_t WS_VISIBLE = 268435456;
+
     using WNDPROC = int64_t(__stdcall*)(void* /*hWnd*/, uint32_t /*uMsg*/, uint64_t /*wParam*/, int64_t /*lParam*/);
 
     struct POINT final
