@@ -14,6 +14,7 @@ namespace
     void* GMainWindowHandle = nullptr;
 
     void InitMainWindow(uintptr_t const width, uintptr_t const height);
+    void CenterMainWindow();
     void ShutMainWindow();
 }
 // namespace
@@ -91,6 +92,41 @@ namespace
             if (result != 0)
                 return;
         }
+
+        CenterMainWindow();
+    }
+
+    void CenterMainWindow()
+    {
+        if (!IsWindow(GMainWindowHandle))
+            return;
+
+        auto windowRect = RECT{};
+        if (!GetWindowRect(GMainWindowHandle, &windowRect))
+            return;
+
+        auto const monitor = MonitorFromWindow(GMainWindowHandle, MONITOR_DEFAULTTONEAREST);
+        if (!monitor)
+            return;
+
+        auto monitorInfo = MONITORINFO{};
+        monitorInfo.cbSize = sizeof(MONITORINFO);
+        if (!GetMonitorInfoW(monitor, &monitorInfo))
+            return;
+
+        auto const posX = (monitorInfo.rcWork.right - monitorInfo.rcWork.left) / 2 - (windowRect.right - windowRect.left) / 2;
+        auto const posY = (monitorInfo.rcWork.bottom - monitorInfo.rcWork.top) / 2 - (windowRect.bottom - windowRect.top) / 2;
+
+        SetWindowPos
+        (
+            /*hWnd*/ GMainWindowHandle,
+            /*hWndInsertAfter*/ HWND_TOP,
+            /*X*/ posX,
+            /*Y*/ posY,
+            /*cx*/ 0,
+            /*cy*/ 0,
+            /*uFlags*/ SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE
+        );
     }
 
     void ShutMainWindow()

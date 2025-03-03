@@ -6,12 +6,20 @@ extern "C" { namespace Aiva::WinApi
     constexpr const uint32_t INVALID_HANDLE_VALUE = uint32_t(-1);
     constexpr const uint32_t ERROR_SUCCESS = 0;
 
+    constexpr void *const HWND_TOP = (void*)0;
+
+    constexpr const uint32_t MONITOR_DEFAULTTONEAREST = 2;
+
     constexpr const uint32_t STD_INPUT_HANDLE = uint32_t(-10);
     constexpr const uint32_t STD_OUTPUT_HANDLE = uint32_t(-11);
     constexpr const uint32_t STD_ERROR_HANDLE = uint32_t(-12);
 
     constexpr const uint32_t SW_HIDE = 0;
     constexpr const uint32_t SW_SHOWNORMAL = 1;
+
+    constexpr const uint32_t SWP_NOACTIVATE = 0x0010;
+    constexpr const uint32_t SWP_NOSIZE = 0x0001;
+    constexpr const uint32_t SWP_NOZORDER = 0x0004;
 
     constexpr const uint32_t WS_OVERLAPPEDWINDOW = 0x000000CF;
 
@@ -21,6 +29,22 @@ extern "C" { namespace Aiva::WinApi
     {
         int32_t x{};
         int32_t y{};
+    };
+
+    struct RECT final
+    {
+        int32_t left{};
+        int32_t top{};
+        int32_t right{};
+        int32_t bottom{};
+    };
+
+    struct MONITORINFO final
+    {
+        uint32_t cbSize{};
+        RECT rcMonitor{};
+        RECT rcWork{};
+        uint32_t dwFlags{};
     };
 
     struct MSG final
@@ -66,13 +90,21 @@ extern "C" { namespace Aiva::WinApi
 
     void* __stdcall GetModuleHandleW(wchar_t const*const moduleName);
 
+    int32_t __stdcall GetMonitorInfoW(void *const hMonitor, MONITORINFO *const lpmi);
+
     void* __stdcall GetStdHandle(uint32_t const nStdHandle);
+
+    int32_t __stdcall GetWindowRect(void *const hWnd, RECT *const lpRect);
 
     int32_t __stdcall IsWindow(void *const hWnd);
 
     int32_t __stdcall IsWindowVisible(void *const hWnd);
 
+    void* __stdcall MonitorFromWindow(void *const hWnd, uint32_t const dwFlags);
+
     uint16_t __stdcall RegisterClassExW(WNDCLASSEXW const*const lpwcx);
+
+    int32_t SetWindowPos(void *const hWnd, void *const hWndInsertAfter, int32_t const X, int32_t const Y, int32_t const cx, int32_t const cy, uint32_t const uFlags);
 
     int32_t __stdcall ShowWindow(void *const hWnd, int32_t const nCmdShow);
 
