@@ -3,25 +3,31 @@
 
 extern "C" { namespace Aiva::WinApi
 {
-    constexpr const uint32_t INVALID_HANDLE_VALUE = uint32_t(-1);
+    constexpr const uint32_t INVALID_HANDLE_VALUE = (uint32_t)-1;
+
     constexpr const uint32_t ERROR_SUCCESS = 0;
 
     constexpr void *const HWND_TOP = (void*)0;
 
     constexpr const uint32_t MONITOR_DEFAULTTONEAREST = 2;
 
-    constexpr const uint32_t STD_INPUT_HANDLE = uint32_t(-10);
-    constexpr const uint32_t STD_OUTPUT_HANDLE = uint32_t(-11);
-    constexpr const uint32_t STD_ERROR_HANDLE = uint32_t(-12);
+    constexpr const uint32_t STD_INPUT_HANDLE = (uint32_t)-10;
+
+    constexpr const uint32_t STD_OUTPUT_HANDLE = (uint32_t)-11;
+
+    constexpr const uint32_t STD_ERROR_HANDLE = (uint32_t)-12;
 
     constexpr const uint32_t SW_HIDE = 0;
+
     constexpr const uint32_t SW_SHOWNORMAL = 1;
 
-    constexpr const uint32_t SWP_NOACTIVATE = 0x0010;
-    constexpr const uint32_t SWP_NOSIZE = 0x0001;
-    constexpr const uint32_t SWP_NOZORDER = 0x0004;
+    constexpr const uint32_t SWP_NOACTIVATE = 16;
 
-    constexpr const uint32_t WS_OVERLAPPEDWINDOW = 0x000000CF;
+    constexpr const uint32_t SWP_NOSIZE = 1;
+
+    constexpr const uint32_t SWP_NOZORDER = 4;
+
+    constexpr const uint32_t WS_OVERLAPPEDWINDOW = 207;
 
     using WNDPROC = int64_t(__stdcall*)(void* /*hWnd*/, uint32_t /*uMsg*/, uint64_t /*wParam*/, int64_t /*lParam*/);
 
