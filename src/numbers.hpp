@@ -6,12 +6,14 @@ namespace aiva
     {
         Int,
         Flt,
+        MAX,
     };
 
     enum class NumberSign
     {
         None,
         Sign,
+        MAX,
     };
 
     enum class NumberSize
@@ -20,6 +22,7 @@ namespace aiva
         Byte2,
         Byte4,
         Byte8,
+        MAX,
     };
 
     template <typename TType>
@@ -56,7 +59,7 @@ namespace aiva
             { return NumberType::Flt; }
 
         else
-            { static_assert(false); }
+            { return NumberType::MAX; }
     }
 
     template <typename TType>
@@ -69,7 +72,7 @@ namespace aiva
             { return NumberSign::None; }
 
         else
-            { static_assert(false); }
+            { return NumberSign::MAX; }
     }
 
     template <typename TType>
@@ -88,13 +91,16 @@ namespace aiva
             { return NumberSize::Byte8; }
 
         else
-            { static_assert(false); }
+            { return NumberSize::MAX; }
     }
 
     template <NumberType TType, NumberSign TSign, NumberSize TSize>
     constexpr auto CreateNumber()
     {
-        if constexpr (TType == GetNumberType<char>() && TSign == GetNumberSign<char>() && TSize == GetNumberSize<char>())
+        if constexpr (TType == NumberType::MAX || TSign == NumberSign::MAX || TSize == NumberSize::MAX)
+            { return nullptr; }
+
+        else if constexpr (TType == GetNumberType<char>() && TSign == GetNumberSign<char>() && TSize == GetNumberSize<char>())
             { char const zero{}; return zero; }
 
         else if constexpr (TType == GetNumberType<signed char>() && TSign == GetNumberSign<signed char>() && TSize == GetNumberSize<signed char>())
@@ -137,7 +143,7 @@ namespace aiva
             { long double const zero{}; return zero; }
 
         else
-            { static_assert(false); }
+            { return nullptr; }
     }
 
     using int8_t = decltype(CreateNumber<NumberType::Int, NumberSign::Sign, NumberSize::Byte1>());
@@ -154,5 +160,6 @@ namespace aiva
     using uintptr_t = decltype(CreateNumber<NumberType::Int, NumberSign::None, GetNumberSize<void*>()>());
 
     enum class byte_t : uint8_t {};
+    using size_t = decltype(sizeof(byte_t));
 }
 // namespace aiva

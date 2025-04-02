@@ -1,1 +1,8 @@
-void Main() {}
+#include "console.hpp"
+#include "process.hpp"
+
+void Main()
+{
+    aiva::PrintLine("Hello World!");
+    aiva::ExitProcess(0);
+}
