@@ -1,0 +1,14 @@
+{
+  "name": "aiva-bun",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "1.2.8"
+  },
+  "peerDependencies": {
+    "typescript": "5.8.2"
+  },
+  "scripts": {
+    "build": "bun run builder.ts"
+  }
+}
