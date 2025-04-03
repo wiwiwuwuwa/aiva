@@ -4,5 +4,5 @@
 void Main()
 {
     aiva::PrintLine("Hello World!");
-    aiva::ExitProcess(0);
+    aiva::ExitProcess();
 }

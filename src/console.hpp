@@ -1,10 +1,11 @@
 #pragma once
+#include "strings.hpp"
 
 namespace aiva
 {
-    void Print(char const*const str);
-    void PrintLine(char const*const str);
-    void Error(char const*const str);
-    void ErrorLine(char const*const str);
+    void Print(CstrView const message);
+    void PrintLine(CstrView const message);
+    void Error(CstrView const message);
+    void ErrorLine(CstrView const message);
 }
 // namespace aiva
