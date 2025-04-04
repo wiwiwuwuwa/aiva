@@ -2,10 +2,11 @@
 #include "memory.hpp"
 #include "process.hpp"
 
+
 void Main()
 {
-    aiva::InitMemorySystem();
-    aiva::PrintLine("Hello World!");
-    aiva::ShutMemorySystem();
-    aiva::ExitProcess();
+    aiva::Memory::InitSystem();
+    aiva::Console::PrintLine("Hello World!");
+    aiva::Memory::ShutSystem();
+    aiva::Process::Exit();
 }

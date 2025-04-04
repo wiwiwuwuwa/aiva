@@ -1,6 +1,7 @@
 #pragma once
 #include "numbers.hpp"
 
+
 namespace aiva
 {
     class CstrView final
@@ -17,8 +18,10 @@ namespace aiva
         char const*const m_data;
     };
 
+
     constexpr size_t StrLen(CstrView const str);
 }
 // namespace aiva
+
 
 #include "strings.inl"

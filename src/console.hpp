@@ -1,7 +1,8 @@
 #pragma once
 #include "strings.hpp"
 
-namespace aiva
+
+namespace aiva::Console
 {
     void Print(CstrView const message);
     void PrintLine(CstrView const message);

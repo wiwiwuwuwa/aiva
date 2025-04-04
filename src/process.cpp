@@ -2,34 +2,38 @@
 #include "console.hpp"
 #include "winapi.hpp"
 
-namespace aiva
+
+using namespace aiva;
+using namespace aiva::Process;
+
+
+[[noreturn]] void Process::Exit(uintptr_t const code, CstrView const message)
 {
-    [[noreturn]] void ExitProcess(uintptr_t const code, CstrView const message)
+    if (message)
     {
-        if (message)
-        {
-            if (code == 0)
-                PrintLine(message);
-            else
-                ErrorLine(message);
-        }
-
-        winapi::ExitProcess((uint32_t)code);
+        if (code == 0)
+            Console::PrintLine(message);
+        else
+            Console::ErrorLine(message);
     }
 
-    [[noreturn]] void ExitProcess()
-    {
-        ExitProcess({}, {});
-    }
-
-    [[noreturn]] void ExitProcess(uintptr_t const code)
-    {
-        ExitProcess(code, {});
-    }
-
-    [[noreturn]] void ExitProcess(CstrView const message)
-    {
-        ExitProcess(1, message);
-    }
+    winapi::ExitProcess((uint32_t)code);
 }
-// namespace aiva
+
+
+[[noreturn]] void Process::Exit()
+{
+    Exit({}, {});
+}
+
+
+[[noreturn]] void Process::Exit(uintptr_t const code)
+{
+    Exit(code, {});
+}
+
+
+[[noreturn]] void Process::Exit(CstrView const message)
+{
+    Exit(1, message);
+}

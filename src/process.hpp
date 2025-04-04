@@ -2,11 +2,12 @@
 #include "numbers.hpp"
 #include "strings.hpp"
 
-namespace aiva
+
+namespace aiva::Process
 {
-    [[noreturn]] void ExitProcess(uintptr_t const code, CstrView const message);
-    [[noreturn]] void ExitProcess();
-    [[noreturn]] void ExitProcess(uintptr_t const code);
-    [[noreturn]] void ExitProcess(CstrView const message);
+    [[noreturn]] void Exit(uintptr_t const code, CstrView const message);
+    [[noreturn]] void Exit();
+    [[noreturn]] void Exit(uintptr_t const code);
+    [[noreturn]] void Exit(CstrView const message);
 }
 // namespace aiva

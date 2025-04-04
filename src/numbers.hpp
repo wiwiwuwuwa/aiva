@@ -9,12 +9,14 @@ namespace aiva
         MAX,
     };
 
+
     enum class NumberSign
     {
         None,
         Sign,
         MAX,
     };
+
 
     enum class NumberSize
     {
@@ -25,11 +27,13 @@ namespace aiva
         MAX,
     };
 
+
     template <typename TType>
     constexpr bool IsInteger()
     {
         return TType(3) / TType(2) == TType(1);
     }
+
 
     template <typename TType>
     constexpr bool IsFloating()
@@ -37,17 +41,20 @@ namespace aiva
         return TType(3) / TType(2) != TType(1);
     }
 
+
     template <typename TType>
     constexpr bool IsUnsigned()
     {
         return TType(-1) >= TType(0);
     }
 
+
     template <typename TType>
     constexpr bool IsSigned()
     {
         return TType(-1) < TType(0);
     }
+
 
     template <typename TType>
     constexpr NumberType GetNumberType()
@@ -62,6 +69,7 @@ namespace aiva
             { return NumberType::MAX; }
     }
 
+
     template <typename TType>
     constexpr NumberSign GetNumberSign()
     {
@@ -74,6 +82,7 @@ namespace aiva
         else
             { return NumberSign::MAX; }
     }
+
 
     template <typename TType>
     constexpr NumberSize GetNumberSize()
@@ -93,6 +102,7 @@ namespace aiva
         else
             { return NumberSize::MAX; }
     }
+
 
     template <NumberType TType, NumberSign TSign, NumberSize TSize>
     constexpr auto CreateNumber()
@@ -146,6 +156,7 @@ namespace aiva
             { return nullptr; }
     }
 
+
     using int8_t = decltype(CreateNumber<NumberType::Int, NumberSign::Sign, NumberSize::Byte1>());
     using int16_t = decltype(CreateNumber<NumberType::Int, NumberSign::Sign, NumberSize::Byte2>());
     using int32_t = decltype(CreateNumber<NumberType::Int, NumberSign::Sign, NumberSize::Byte4>());
@@ -158,6 +169,7 @@ namespace aiva
     using float64_t = decltype(CreateNumber<NumberType::Flt, NumberSign::None, NumberSize::Byte8>());
     using intptr_t = decltype(CreateNumber<NumberType::Int, NumberSign::Sign, GetNumberSize<void*>()>());
     using uintptr_t = decltype(CreateNumber<NumberType::Int, NumberSign::None, GetNumberSize<void*>()>());
+
 
     enum class byte_t : uint8_t {};
     using size_t = decltype(sizeof(byte_t));
