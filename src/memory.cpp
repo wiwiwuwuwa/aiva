@@ -10,30 +10,59 @@ static void* GHeapPtr{};
 static Allocator GHeapAlloc{};
 
 
-static void* AllocateHeapMemory(size_t const size)
+static byte_t& AllocateHeapMemory(size_t const size)
 {
-    auto const ptr = winapi::HeapAlloc(GHeapPtr, {}, size);
-    if (!ptr)
+    auto const data = winapi::HeapAlloc(GHeapPtr, {}, size);
+    if (!data)
         winapi::ExitProcess(1);
 
-    return ptr;
+    return *reinterpret_cast<byte_t*>(data);
 }
 
 
-static void* ReallocateHeapMemory(void* const ptr, size_t const size)
+static byte_t& ReallocateHeapMemory(byte_t& data, size_t const size)
 {
-    auto const newPtr = winapi::HeapReAlloc(GHeapPtr, {}, ptr, size);
-    if (!newPtr)
+    auto const newData = winapi::HeapReAlloc(GHeapPtr, {}, &data, size);
+    if (!newData)
         winapi::ExitProcess(1);
 
-    return newPtr;
+    return *reinterpret_cast<byte_t*>(newData);
 }
 
 
-static void FreeHeapMemory(void* const ptr)
+static decltype(nullptr) FreeHeapMemory(byte_t& data)
 {
-    if (!winapi::HeapFree(GHeapPtr, {}, ptr))
+    if (!winapi::HeapFree(GHeapPtr, {}, &data))
         winapi::ExitProcess(winapi::GetLastError());
+
+    return nullptr;
+}
+
+
+byte_t& Allocator::Alloc(size_t const size) const
+{
+    if (!m_alloc)
+        winapi::ExitProcess(1);
+
+    return m_alloc(size);
+}
+
+
+byte_t& Allocator::Realloc(byte_t& data, size_t const size) const
+{
+    if (!m_realloc)
+        winapi::ExitProcess(1);
+
+    return m_realloc(data, size);
+}
+
+
+decltype(nullptr) Allocator::Free(byte_t& data) const
+{
+    if (!m_free)
+        winapi::ExitProcess(1);
+
+    return m_free(data);
 }
 
 
@@ -43,17 +72,17 @@ void Memory::InitSystem()
     if (!GHeapPtr)
         winapi::ExitProcess(winapi::GetLastError());
 
-    GHeapAlloc.alloc = AllocateHeapMemory;
-    GHeapAlloc.realloc = ReallocateHeapMemory;
-    GHeapAlloc.free = FreeHeapMemory;
+    GHeapAlloc.m_alloc = AllocateHeapMemory;
+    GHeapAlloc.m_realloc = ReallocateHeapMemory;
+    GHeapAlloc.m_free = FreeHeapMemory;
 }
 
 
 void Memory::ShutSystem()
 {
-    GHeapAlloc.free = {};
-    GHeapAlloc.realloc = {};
-    GHeapAlloc.alloc = {};
+    GHeapAlloc.m_free = {};
+    GHeapAlloc.m_realloc = {};
+    GHeapAlloc.m_alloc = {};
 
     if (!winapi::HeapDestroy(GHeapPtr))
         winapi::ExitProcess(winapi::GetLastError());
@@ -61,7 +90,7 @@ void Memory::ShutSystem()
 }
 
 
-const Allocator& GetHeapAlloc()
+const Allocator& Memory::GetHeapAlloc()
 {
     return GHeapAlloc;
 }
