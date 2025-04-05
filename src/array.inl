@@ -7,12 +7,21 @@ namespace aiva
 {
     template <typename TType>
     Array<TType>::Array(size_t const size, Memory::AllocatorBase const& allocator)
-        : m_allocator{ allocator }
+        : m_allocator{ allocator },
+          m_span{ allocator.CreateArray<TType>(size) }
     {
         if (size <= 0)
             CheckNoEntryMsg("'size' is not valid");
+    }
 
-        m_span = allocator.CreateArray<TType>(size);
+
+    template <typename TType>
+    Array<TType>::Array(CreateArrayUnsafe const, size_t const size, Memory::AllocatorBase const& allocator)
+        : m_allocator{ allocator },
+          m_span{ size, reinterpret_cast<TType&>(m_allocator.Alloc(sizeof(TType) * size)) }
+    {
+        if (size <= 0)
+            CheckNoEntryMsg("'size' is not valid");
     }
 
 

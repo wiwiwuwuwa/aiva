@@ -4,11 +4,15 @@
 
 namespace aiva
 {
+    enum CreateArrayUnsafe { kCreateArrayUnsafe };
+
+
     template <typename TType>
     class Array final
     {
     public:
         Array(size_t const size, Memory::AllocatorBase const& allocator = Memory::GetHeapAlloc());
+        Array(CreateArrayUnsafe const, size_t const size, Memory::AllocatorBase const& allocator = Memory::GetHeapAlloc());
         ~Array();
 
         constexpr Array(Array const&) = delete;
