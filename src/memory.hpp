@@ -26,9 +26,9 @@ namespace aiva::Memory
     class AllocatorBase
     {
     public:
-        byte_t& Alloc(size_t const size) const;
-        byte_t& Realloc(byte_t& data, size_t const size) const;
-        decltype(nullptr) Free(byte_t& data) const;
+        virtual byte_t& Alloc(size_t const size) const;
+        virtual byte_t& Realloc(byte_t& data, size_t const size) const;
+        virtual decltype(nullptr) Free(byte_t& data) const;
 
         template <typename TType, typename... TArgs>
         TType& Create(TArgs&&... args) const;
@@ -41,10 +41,6 @@ namespace aiva::Memory
 
     protected:
         virtual ~AllocatorBase() = default;
-
-        virtual byte_t& Alloc_Impl(size_t const size) const;
-        virtual byte_t& Realloc_Impl(byte_t& data, size_t const size) const;
-        virtual decltype(nullptr) Free_Impl(byte_t& data) const;
     };
 
 

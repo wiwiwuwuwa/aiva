@@ -15,10 +15,9 @@ namespace
         HeapAllocator();
         ~HeapAllocator() override;
 
-    protected:
-        byte_t& Alloc_Impl(size_t const size) const override;
-        byte_t& Realloc_Impl(byte_t& data, size_t const size) const override;
-        decltype(nullptr) Free_Impl(byte_t& data) const override;
+        byte_t& Alloc(size_t const size) const override;
+        byte_t& Realloc(byte_t& data, size_t const size) const override;
+        decltype(nullptr) Free(byte_t& data) const override;
 
     private:
         void* m_heap;
@@ -46,7 +45,7 @@ HeapAllocator::~HeapAllocator()
 }
 
 
-byte_t& HeapAllocator::Alloc_Impl(size_t const size) const
+byte_t& HeapAllocator::Alloc(size_t const size) const
 {
     auto const data = winapi::HeapAlloc(m_heap, {}, size);
     if (!data)
@@ -56,7 +55,7 @@ byte_t& HeapAllocator::Alloc_Impl(size_t const size) const
 }
 
 
-byte_t& HeapAllocator::Realloc_Impl(byte_t& data, size_t const size) const
+byte_t& HeapAllocator::Realloc(byte_t& data, size_t const size) const
 {
     auto const newData = winapi::HeapReAlloc(m_heap, {}, &data, size);
     if (!newData)
@@ -66,7 +65,7 @@ byte_t& HeapAllocator::Realloc_Impl(byte_t& data, size_t const size) const
 }
 
 
-decltype(nullptr) HeapAllocator::Free_Impl(byte_t& data) const
+decltype(nullptr) HeapAllocator::Free(byte_t& data) const
 {
     if (!winapi::HeapFree(m_heap, {}, &data))
         CheckNoEntryMsg("'winapi::HeapFree' failed");
@@ -75,37 +74,19 @@ decltype(nullptr) HeapAllocator::Free_Impl(byte_t& data) const
 }
 
 
-byte_t& AllocatorBase::Alloc(size_t const size) const
-{
-    return Alloc_Impl(size);
-}
-
-
-byte_t& AllocatorBase::Realloc(byte_t& data, size_t const size) const
-{
-    return Realloc_Impl(data, size);
-}
-
-
-decltype(nullptr) AllocatorBase::Free(byte_t& data) const
-{
-    return Free_Impl(data);
-}
-
-
-byte_t& AllocatorBase::Alloc_Impl(size_t const) const
+byte_t& AllocatorBase::Alloc(size_t const) const
 {
     CheckNoEntryMsg("Not implemented");
 }
 
 
-byte_t& AllocatorBase::Realloc_Impl(byte_t&, size_t const) const
+byte_t& AllocatorBase::Realloc(byte_t&, size_t const) const
 {
     CheckNoEntryMsg("Not implemented");
 }
 
 
-decltype(nullptr) AllocatorBase::Free_Impl(byte_t&) const
+decltype(nullptr) AllocatorBase::Free(byte_t&) const
 {
     CheckNoEntryMsg("Not implemented");
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+
 namespace aiva
 {
     enum class NumberType

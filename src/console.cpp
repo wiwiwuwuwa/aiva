@@ -8,6 +8,11 @@ using namespace aiva;
 using namespace aiva::Console;
 
 
+static bool GInitialized{};
+static void* GPrintHandle;
+static void* GErrorHandle;
+
+
 static void Write(void*const handle, CstrView const message)
 {
     if (handle == winapi::INVALID_HANDLE_VALUE)
@@ -23,53 +28,75 @@ static void Write(void*const handle, CstrView const message)
 }
 
 
-void Console::Print(CstrView const message)
+void Console::InitSystem()
 {
-    if (!message)
-        return;
-
-    auto const handle = winapi::GetStdHandle(winapi::STD_OUTPUT_HANDLE);
-    if (handle == winapi::INVALID_HANDLE_VALUE)
+    if (GInitialized)
         CheckNoEntry();
 
-    Write(handle, message);
+    GPrintHandle = winapi::GetStdHandle(winapi::STD_OUTPUT_HANDLE);
+    if (!GPrintHandle)
+        CheckNoEntry();
+
+    GErrorHandle = winapi::GetStdHandle(winapi::STD_ERROR_HANDLE);
+    if (!GErrorHandle)
+        CheckNoEntry();
+
+    GInitialized = true;
+}
+
+
+void Console::ShutSystem()
+{
+    if (!GInitialized)
+        CheckNoEntry();
+
+    GInitialized = false;
+}
+
+
+void Console::Print(CstrView const message)
+{
+    if (!GInitialized)
+        CheckNoEntry();
+
+    if (message)
+        Write(GPrintHandle, message);
 }
 
 
 void Console::PrintLine(CstrView const message)
 {
-    auto const handle = winapi::GetStdHandle(winapi::STD_OUTPUT_HANDLE);
-    if (handle == winapi::INVALID_HANDLE_VALUE)
+    if (!GInitialized)
         CheckNoEntry();
 
-    Write(handle, message);
-    Write(handle, "\n");
+    if (message)
+        Print(message);
+
+    Print("\n");
 }
 
 
 void Console::Error(CstrView const message)
 {
-    if (!message)
-        return;
-
-    auto const handle = winapi::GetStdHandle(winapi::STD_ERROR_HANDLE);
-    if (handle == winapi::INVALID_HANDLE_VALUE)
+    if (!GInitialized)
         CheckNoEntry();
 
-    Write(handle, "\033[31m");
-    Write(handle, message);
-    Write(handle, "\033[0m");
+    if (message)
+    {
+        Write(GErrorHandle, "\033[31m");
+        Write(GErrorHandle, message);
+        Write(GErrorHandle, "\033[0m");
+    }
 }
 
 
 void Console::ErrorLine(CstrView const message)
 {
-    auto const handle = winapi::GetStdHandle(winapi::STD_ERROR_HANDLE);
-    if (handle == winapi::INVALID_HANDLE_VALUE)
+    if (!GInitialized)
         CheckNoEntry();
 
-    Write(handle, "\033[31m");
-    Write(handle, message);
-    Write(handle, "\033[0m");
-    Write(handle, "\n");
+    if (message)
+        Error(message);
+
+    Error("\n");
 }

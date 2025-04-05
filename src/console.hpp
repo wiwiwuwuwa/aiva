@@ -4,6 +4,9 @@
 
 namespace aiva::Console
 {
+    void InitSystem();
+    void ShutSystem();
+
     void Print(CstrView const message);
     void PrintLine(CstrView const message);
     void Error(CstrView const message);
