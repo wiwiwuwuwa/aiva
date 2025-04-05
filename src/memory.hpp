@@ -45,21 +45,6 @@ namespace aiva::Memory
 
 
     template <typename TType>
-    class ObjectWrapper final
-    {
-    public:
-        template <typename... TArgs>
-        constexpr ObjectWrapper(TArgs&&... args);
-
-        constexpr TType& GetObject();
-        constexpr TType const& GetObject() const;
-
-    private:
-        TType m_object;
-    };
-
-
-    template <typename TType>
     class MemoryAsObject final
     {
     public:
@@ -71,12 +56,7 @@ namespace aiva::Memory
         constexpr TType const& GetObject() const;
 
     private:
-        using Wrapper_t = ObjectWrapper<TType>;
-
-        constexpr Wrapper_t& GetWrapper();
-        constexpr Wrapper_t const& GetWrapper() const;
-
-        alignas(alignof(Wrapper_t)) byte_t m_wrapper[sizeof(Wrapper_t)];
+        alignas(alignof(TType)) byte_t m_object[sizeof(TType)];
     };
 
 

@@ -118,67 +118,30 @@ namespace aiva::Memory
 
     template <typename TType>
     template <typename... TArgs>
-    constexpr ObjectWrapper<TType>::ObjectWrapper(TArgs&&... args)
-        : m_object{ Forward<TArgs>(args)... }
-    {
-
-    }
-
-
-    template <typename TType>
-    constexpr TType& ObjectWrapper<TType>::GetObject()
-    {
-        return m_object;
-    }
-
-
-    template <typename TType>
-    constexpr TType const& ObjectWrapper<TType>::GetObject() const
-    {
-        return m_object;
-    }
-
-
-    template <typename TType>
-    template <typename... TArgs>
     constexpr void MemoryAsObject<TType>::Construct(TArgs&&... args)
     {
-        new (m_wrapper) Wrapper_t{ Forward<TArgs>(args)... };
+        new (m_object) TType{ Forward<TArgs>(args)... };
     }
 
 
     template <typename TType>
     constexpr void MemoryAsObject<TType>::Destruct()
     {
-        GetWrapper().~Wrapper_t();
+        GetObject().~TType();
     }
 
 
     template <typename TType>
     constexpr TType& MemoryAsObject<TType>::GetObject()
     {
-        return GetWrapper().GetObject();
+        return reinterpret_cast<TType&>(m_object);
     }
 
 
     template <typename TType>
     constexpr TType const& MemoryAsObject<TType>::GetObject() const
     {
-        return GetWrapper().GetObject();
-    }
-
-
-    template <typename TType>
-    constexpr typename MemoryAsObject<TType>::Wrapper_t& MemoryAsObject<TType>::GetWrapper()
-    {
-        return reinterpret_cast<Wrapper_t&>(m_wrapper);
-    }
-
-
-    template <typename TType>
-    constexpr typename MemoryAsObject<TType>::Wrapper_t const& MemoryAsObject<TType>::GetWrapper() const
-    {
-        return reinterpret_cast<Wrapper_t const&>(m_wrapper);
+        return reinterpret_cast<TType const&>(m_object);
     }
 }
 // namespace aiva::Memory
