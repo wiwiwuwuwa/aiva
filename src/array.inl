@@ -21,5 +21,26 @@ namespace aiva
     {
         m_allocator.DeleteArray(m_span);
     }
+
+
+    template <typename TType>
+    constexpr TType& Array<TType>::operator[](size_t const index)
+    {
+        return m_span[index];
+    }
+
+
+    template <typename TType>
+    constexpr TType const& Array<TType>::operator[](size_t const index) const
+    {
+        return m_span[index];
+    }
+
+
+    template <typename TType>
+    constexpr size_t Array<TType>::GetSize() const
+    {
+        return m_span.GetSize();
+    }
 }
 // namespace aiva

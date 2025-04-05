@@ -11,10 +11,14 @@ namespace aiva
         Array(size_t const size, Memory::AllocatorBase const& allocator = Memory::GetHeapAlloc());
         ~Array();
 
-        Array(Array const&) = delete;
-        Array& operator=(Array const&) = delete;
-        Array(Array&& other) = delete;
-        Array& operator=(Array&& other) = delete;
+        constexpr Array(Array const&) = delete;
+        constexpr Array& operator=(Array const&) = delete;
+        constexpr Array(Array&& other) = delete;
+        constexpr Array& operator=(Array&& other) = delete;
+
+        constexpr TType& operator[](size_t const index);
+        constexpr TType const& operator[](size_t const index) const;
+        constexpr size_t GetSize() const;
 
     private:
         Memory::AllocatorBase const& m_allocator;
