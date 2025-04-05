@@ -21,19 +21,13 @@ using namespace aiva::Process;
 }
 
 
-[[noreturn]] void Process::Exit()
+[[noreturn]] void Process::ExitSuccess(CstrView const message)
 {
-    Exit({}, {});
+    Exit(0, message);
 }
 
 
-[[noreturn]] void Process::Exit(uintptr_t const code)
-{
-    Exit(code, {});
-}
-
-
-[[noreturn]] void Process::Exit(CstrView const message)
+[[noreturn]] void Process::ExitFailure(CstrView const message)
 {
     Exit(1, message);
 }

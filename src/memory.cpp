@@ -1,4 +1,5 @@
 #include "memory.hpp"
+#include "ensures.hpp"
 #include "winapi.hpp"
 
 
@@ -14,7 +15,7 @@ static byte_t& AllocateHeapMemory(size_t const size)
 {
     auto const data = winapi::HeapAlloc(GHeapPtr, {}, size);
     if (!data)
-        winapi::ExitProcess(1);
+        CheckNoEntryMsg("'winapi::HeapAlloc' failed");
 
     return *reinterpret_cast<byte_t*>(data);
 }
@@ -24,7 +25,7 @@ static byte_t& ReallocateHeapMemory(byte_t& data, size_t const size)
 {
     auto const newData = winapi::HeapReAlloc(GHeapPtr, {}, &data, size);
     if (!newData)
-        winapi::ExitProcess(1);
+        CheckNoEntryMsg("'winapi::HeapReAlloc' failed");
 
     return *reinterpret_cast<byte_t*>(newData);
 }
@@ -33,7 +34,7 @@ static byte_t& ReallocateHeapMemory(byte_t& data, size_t const size)
 static decltype(nullptr) FreeHeapMemory(byte_t& data)
 {
     if (!winapi::HeapFree(GHeapPtr, {}, &data))
-        winapi::ExitProcess(winapi::GetLastError());
+        CheckNoEntryMsg("'winapi::HeapFree' failed");
 
     return nullptr;
 }
@@ -42,7 +43,7 @@ static decltype(nullptr) FreeHeapMemory(byte_t& data)
 byte_t& Allocator::Alloc(size_t const size) const
 {
     if (!m_alloc)
-        winapi::ExitProcess(1);
+        CheckNoEntryMsg("'m_alloc' is not valid");
 
     return m_alloc(size);
 }
@@ -51,7 +52,7 @@ byte_t& Allocator::Alloc(size_t const size) const
 byte_t& Allocator::Realloc(byte_t& data, size_t const size) const
 {
     if (!m_realloc)
-        winapi::ExitProcess(1);
+        CheckNoEntryMsg("'m_realloc' is not valid");
 
     return m_realloc(data, size);
 }
@@ -60,7 +61,7 @@ byte_t& Allocator::Realloc(byte_t& data, size_t const size) const
 decltype(nullptr) Allocator::Free(byte_t& data) const
 {
     if (!m_free)
-        winapi::ExitProcess(1);
+        CheckNoEntryMsg("'m_free' is not valid");
 
     return m_free(data);
 }
@@ -70,7 +71,7 @@ void Memory::InitSystem()
 {
     GHeapPtr = winapi::HeapCreate({}, {}, {});
     if (!GHeapPtr)
-        winapi::ExitProcess(winapi::GetLastError());
+        CheckNoEntryMsg("'winapi::HeapCreate' failed");
 
     GHeapAlloc.m_alloc = AllocateHeapMemory;
     GHeapAlloc.m_realloc = ReallocateHeapMemory;
@@ -85,7 +86,7 @@ void Memory::ShutSystem()
     GHeapAlloc.m_alloc = {};
 
     if (!winapi::HeapDestroy(GHeapPtr))
-        winapi::ExitProcess(winapi::GetLastError());
+        CheckNoEntryMsg("'winapi::HeapDestroy' failed");
     GHeapPtr = {};
 }
 

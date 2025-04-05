@@ -8,15 +8,18 @@ namespace aiva::Memory
     class Span final
     {
     public:
-        Span(TType *const data, size_t const size);
-        Span(TType *const data);
+        constexpr Span();
+        constexpr Span(size_t const size, TType& data);
+        constexpr Span(TType& data);
 
-        TType* GetData() const;
-        size_t GetSize() const;
+        constexpr operator bool() const;
+        constexpr TType& operator[](size_t const index) const;
+        constexpr TType& GetData() const;
+        constexpr size_t GetSize() const;
 
     private:
-        TType *const m_data;
-        size_t const m_size;
+        size_t m_size;
+        TType* m_data;
     };
 
 
@@ -33,8 +36,12 @@ namespace aiva::Memory
 
         template <typename TType, typename... TArgs>
         TType& Create(TArgs&&... args) const;
+        template <typename TType, typename... TArgs>
+        Span<TType> CreateArray(size_t const size, TArgs&&... args) const;
         template <typename TType>
         decltype(nullptr) Delete(TType& data) const;
+        template <typename TType>
+        decltype(nullptr) DeleteArray(Span<TType> const& data) const;
 
         AllocFunc_t m_alloc{};
         ReallocFunc_t m_realloc{};

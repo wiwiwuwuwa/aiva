@@ -8,5 +8,5 @@ void Main()
     aiva::Memory::InitSystem();
     aiva::Console::PrintLine("Hello World!");
     aiva::Memory::ShutSystem();
-    aiva::Process::Exit();
+    aiva::Process::ExitSuccess();
 }
