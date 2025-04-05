@@ -68,32 +68,35 @@ namespace aiva::Memory
 
 
     template <typename TType, typename... TArgs>
-    TType& Allocator::Create(TArgs&&... args) const
+    TType& AllocatorBase::Create(TArgs&&... args) const
     {
-        TType& data = reinterpret_cast<TType&>(Alloc(sizeof(TType)));
-        data = TType{ Forward<TArgs>(args)... };
+        TType& object = reinterpret_cast<TType&>(Alloc(sizeof(TType)));
+        new (&object) TType{ Forward<TArgs>(args)... };
 
-        return data;
+        return object;
     }
 
 
     template <typename TType, typename... TArgs>
-    Span<TType> Allocator::CreateArray(size_t const size, TArgs&&... args) const
+    Span<TType> AllocatorBase::CreateArray(size_t const size, TArgs&&... args) const
     {
         if (size <= 0)
             CheckNoEntryMsg("'size' is not valid");
 
-        TType& data = reinterpret_cast<TType&>(Alloc(sizeof(TType) * size));
+        TType& objects = reinterpret_cast<TType&>(Alloc(sizeof(TType) * size));
 
         for (auto i = size_t{}; i < size; i++)
-            (&data)[i] = TType{ Forward<TArgs>(args)... };
+        {
+            TType& object = (&objects)[i];
+            new (&object) TType{ Forward<TArgs>(args)... };
+        }
 
-        return Span<TType>{ size, data };
+        return Span<TType>{ size, objects };
     }
 
 
     template <typename TType>
-    decltype(nullptr) Allocator::Delete(TType& data) const
+    decltype(nullptr) AllocatorBase::Delete(TType& data) const
     {
         data.~TType();
         return Free(reinterpret_cast<byte_t&>(data));
@@ -101,7 +104,7 @@ namespace aiva::Memory
 
 
     template <typename TType>
-    decltype(nullptr) Allocator::DeleteArray(Span<TType> const& data) const
+    decltype(nullptr) AllocatorBase::DeleteArray(Span<TType> const& data) const
     {
         if (!data)
             CheckNoEntryMsg("'data' is not valid");
@@ -110,6 +113,72 @@ namespace aiva::Memory
             data[i - 1].~TType();
 
         return Free(reinterpret_cast<byte_t&>(data.GetData()));
+    }
+
+
+    template <typename TType>
+    template <typename... TArgs>
+    constexpr ObjectWrapper<TType>::ObjectWrapper(TArgs&&... args)
+        : m_object{ Forward<TArgs>(args)... }
+    {
+
+    }
+
+
+    template <typename TType>
+    constexpr TType& ObjectWrapper<TType>::GetObject()
+    {
+        return m_object;
+    }
+
+
+    template <typename TType>
+    constexpr TType const& ObjectWrapper<TType>::GetObject() const
+    {
+        return m_object;
+    }
+
+
+    template <typename TType>
+    template <typename... TArgs>
+    constexpr void MemoryAsObject<TType>::Construct(TArgs&&... args)
+    {
+        new (m_wrapper) Wrapper_t{ Forward<TArgs>(args)... };
+    }
+
+
+    template <typename TType>
+    constexpr void MemoryAsObject<TType>::Destruct()
+    {
+        GetWrapper().~Wrapper_t();
+    }
+
+
+    template <typename TType>
+    constexpr TType& MemoryAsObject<TType>::GetObject()
+    {
+        return GetWrapper().GetObject();
+    }
+
+
+    template <typename TType>
+    constexpr TType const& MemoryAsObject<TType>::GetObject() const
+    {
+        return GetWrapper().GetObject();
+    }
+
+
+    template <typename TType>
+    constexpr typename MemoryAsObject<TType>::Wrapper_t& MemoryAsObject<TType>::GetWrapper()
+    {
+        return reinterpret_cast<Wrapper_t&>(m_wrapper);
+    }
+
+
+    template <typename TType>
+    constexpr typename MemoryAsObject<TType>::Wrapper_t const& MemoryAsObject<TType>::GetWrapper() const
+    {
+        return reinterpret_cast<Wrapper_t const&>(m_wrapper);
     }
 }
 // namespace aiva::Memory

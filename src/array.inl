@@ -6,7 +6,7 @@
 namespace aiva
 {
     template <typename TType>
-    Array<TType>::Array(size_t const size, Memory::Allocator const& allocator)
+    Array<TType>::Array(size_t const size, Memory::AllocatorBase const& allocator)
         : m_allocator{ allocator }
     {
         if (size <= 0)

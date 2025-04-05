@@ -8,7 +8,7 @@ namespace aiva
     class Array final
     {
     public:
-        Array(size_t const size, Memory::Allocator const& allocator = Memory::GetHeapAlloc());
+        Array(size_t const size, Memory::AllocatorBase const& allocator = Memory::GetHeapAlloc());
         ~Array();
 
         Array(Array const&) = delete;
@@ -17,7 +17,7 @@ namespace aiva
         Array& operator=(Array&& other) = delete;
 
     private:
-        Memory::Allocator const& m_allocator;
+        Memory::AllocatorBase const& m_allocator;
         Memory::Span<TType> m_span;
     };
 }
