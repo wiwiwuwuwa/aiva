@@ -1,7 +1,7 @@
 #pragma once
-#include "numbers.hpp"
+#include "Numbers.hpp"
 
-extern "C" { namespace aiva::winapi
+extern "C" { namespace Aiva::WinApi
 {
     inline auto const INVALID_HANDLE_VALUE = (void*)(uintptr_t)(-1);
     constexpr auto const STD_INPUT_HANDLE = (uint32_t)(-10);
@@ -18,4 +18,4 @@ extern "C" { namespace aiva::winapi
     void* __stdcall HeapReAlloc(void* const hHeap, uint32_t const dwFlags, void* const lpMem, size_t const dwBytes);
     int __stdcall WriteFile(void *const hFile, void const*const lpBuffer, uint32_t const nNumberOfBytesToWrite, uint32_t *const lpNumberOfBytesWritten, void *const lpOverlapped);
 }}
-// extern "C" { namespace aiva
+// extern "C" { namespace Aiva

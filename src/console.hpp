@@ -1,8 +1,8 @@
 #pragma once
-#include "strings.hpp"
+#include "CstrView.hpp"
 
 
-namespace aiva::Console
+namespace Aiva::Console
 {
     void InitSystem();
     void ShutSystem();
@@ -12,4 +12,4 @@ namespace aiva::Console
     void Error(CstrView const message);
     void ErrorLine(CstrView const message);
 }
-// namespace aiva
+// namespace Aiva

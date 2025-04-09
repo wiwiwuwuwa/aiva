@@ -1,10 +1,12 @@
-#include "memory.hpp"
-#include "ensures.hpp"
-#include "winapi.hpp"
+#include "Memory.hpp"
+#include "AllocatorBase.hpp"
+#include "Ensures.hpp"
+#include "MemoryAsObject.hpp"
+#include "WinApi.hpp"
 
 
-using namespace aiva;
-using namespace aiva::Memory;
+using namespace Aiva;
+using namespace Aiva::Memory;
 
 
 namespace
@@ -37,7 +39,7 @@ static System* GSystem{};
 
 HeapAllocator::HeapAllocator()
 {
-    m_heap = winapi::HeapCreate({}, {}, {});
+    m_heap = WinApi::HeapCreate({}, {}, {});
     if (!m_heap)
         CheckNoEntry();
 }
@@ -45,14 +47,14 @@ HeapAllocator::HeapAllocator()
 
 HeapAllocator::~HeapAllocator()
 {
-    if (!winapi::HeapDestroy(m_heap))
+    if (!WinApi::HeapDestroy(m_heap))
         CheckNoEntry();
 }
 
 
 byte_t& HeapAllocator::Alloc(size_t const size) const
 {
-    auto const data = winapi::HeapAlloc(m_heap, {}, size);
+    auto const data = WinApi::HeapAlloc(m_heap, {}, size);
     if (!data)
         CheckNoEntry();
 
@@ -62,7 +64,7 @@ byte_t& HeapAllocator::Alloc(size_t const size) const
 
 byte_t& HeapAllocator::Realloc(byte_t& data, size_t const size) const
 {
-    auto const newData = winapi::HeapReAlloc(m_heap, {}, &data, size);
+    auto const newData = WinApi::HeapReAlloc(m_heap, {}, &data, size);
     if (!newData)
         CheckNoEntry();
 
@@ -72,28 +74,10 @@ byte_t& HeapAllocator::Realloc(byte_t& data, size_t const size) const
 
 decltype(nullptr) HeapAllocator::Free(byte_t& data) const
 {
-    if (!winapi::HeapFree(m_heap, {}, &data))
+    if (!WinApi::HeapFree(m_heap, {}, &data))
         CheckNoEntry();
 
     return nullptr;
-}
-
-
-byte_t& AllocatorBase::Alloc(size_t const) const
-{
-    CheckNoEntry();
-}
-
-
-byte_t& AllocatorBase::Realloc(byte_t&, size_t const) const
-{
-    CheckNoEntry();
-}
-
-
-decltype(nullptr) AllocatorBase::Free(byte_t&) const
-{
-    CheckNoEntry();
 }
 
 
@@ -123,31 +107,4 @@ AllocatorBase const& Memory::GetHeapAlloc()
         CheckNoEntry();
 
     return GSystem->m_heapAlloc;
-}
-
-
-void* operator new(size_t const size)
-{
-    if (size <= 0)
-        CheckNoEntry();
-
-    return &GetHeapAlloc().Alloc(size);
-}
-
-
-void* operator new(size_t const size, void *const ptr)
-{
-    if (size <= 0)
-        CheckNoEntry();
-
-    return ptr;
-}
-
-
-void operator delete(void *const ptr, size_t const size)
-{
-    if (!ptr || size <= 0)
-        CheckNoEntry();
-
-    GetHeapAlloc().Free(*reinterpret_cast<byte_t*>(ptr));
 }

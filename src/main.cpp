@@ -1,17 +1,17 @@
-#include "console.hpp"
-#include "memory.hpp"
-#include "process.hpp"
+#include "Console.hpp"
+#include "Memory.hpp"
+#include "Process.hpp"
 
 
 void Main()
 {
-    aiva::Console::InitSystem();
-    aiva::Memory::InitSystem();
+    Aiva::Memory::InitSystem();
+    Aiva::Console::InitSystem();
 
-    aiva::Console::PrintLine("Hello World!");
+    Aiva::Console::PrintLine("Hello World!");
 
-    aiva::Memory::ShutSystem();
-    aiva::Console::ShutSystem();
+    Aiva::Console::ShutSystem();
+    Aiva::Memory::ShutSystem();
 
-    aiva::Process::ExitSuccess();
+    Aiva::Process::ExitSuccess();
 }

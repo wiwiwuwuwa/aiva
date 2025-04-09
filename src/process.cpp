@@ -1,10 +1,10 @@
-#include "process.hpp"
-#include "console.hpp"
-#include "winapi.hpp"
+#include "Process.hpp"
+#include "Console.hpp"
+#include "WinApi.hpp"
 
 
-using namespace aiva;
-using namespace aiva::Process;
+using namespace Aiva;
+using namespace Aiva::Process;
 
 
 [[noreturn]] void Process::Exit(uintptr_t const code, CstrView const message)
@@ -17,7 +17,7 @@ using namespace aiva::Process;
             Console::ErrorLine(message);
     }
 
-    winapi::ExitProcess((uint32_t)code);
+    WinApi::ExitProcess((uint32_t)code);
 }
 
 

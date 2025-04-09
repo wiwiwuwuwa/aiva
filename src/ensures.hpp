@@ -1,11 +1,11 @@
 #pragma once
-#include "console.hpp"
-#include "process.hpp"
+#include "Console.hpp"
+#include "Process.hpp"
 
 
 #define CheckNoEntry() \
 { \
-    aiva::Process::ExitFailure(); \
+    Aiva::Process::ExitFailure(); \
 } \
 
 
@@ -13,12 +13,12 @@
 { \
     if (msg) \
     { \
-        aiva::Console::Error(__FILE__); \
-        aiva::Console::Error(": "); \
-        aiva::Console::Error(__func__); \
-        aiva::Console::Error(": "); \
-        aiva::Console::Error(msg); \
-        aiva::Console::Error(".\n"); \
+        Aiva::Console::Error(__FILE__); \
+        Aiva::Console::Error(": "); \
+        Aiva::Console::Error(__func__); \
+        Aiva::Console::Error(": "); \
+        Aiva::Console::Error(msg); \
+        Aiva::Console::Error(".\n"); \
     } \
     CheckNoEntry(); \
 } \

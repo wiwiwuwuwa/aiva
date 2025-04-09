@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace aiva
+namespace Aiva
 {
     enum class NumberType
     {
@@ -175,4 +175,4 @@ namespace aiva
     enum class byte_t : uint8_t {};
     using size_t = decltype(sizeof(byte_t));
 }
-// namespace aiva
+// namespace Aiva

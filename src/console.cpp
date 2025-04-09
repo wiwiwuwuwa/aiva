@@ -1,12 +1,11 @@
-#include "console.hpp"
-#include "ensures.hpp"
-#include "memory.hpp"
-#include "strings.hpp"
-#include "winapi.hpp"
+#include "Console.hpp"
+#include "Ensures.hpp"
+#include "MemoryAsObject.hpp"
+#include "WinApi.hpp"
 
 
-using namespace aiva;
-using namespace aiva::Console;
+using namespace Aiva;
+using namespace Aiva::Console;
 
 
 namespace
@@ -20,13 +19,13 @@ namespace
 // namespace
 
 
-static Memory::MemoryAsObject<System> GSystemObject{};
+static MemoryAsObject<System> GSystemObject{};
 static System* GSystem{};
 
 
 static void Write(void*const handle, CstrView const message)
 {
-    if (handle == winapi::INVALID_HANDLE_VALUE)
+    if (handle == WinApi::INVALID_HANDLE_VALUE)
         CheckNoEntry();
 
     if (!message)
@@ -34,7 +33,7 @@ static void Write(void*const handle, CstrView const message)
 
     auto written = uint32_t{};
 
-    if (!winapi::WriteFile(handle, message, StrLen(message), &written, nullptr))
+    if (!WinApi::WriteFile(handle, message, StrLen(message), &written, nullptr))
         CheckNoEntry();
 }
 
@@ -47,11 +46,11 @@ void Console::InitSystem()
     GSystemObject.Construct();
     GSystem = &GSystemObject.GetObject();
 
-    GSystem->printHandle = winapi::GetStdHandle(winapi::STD_OUTPUT_HANDLE);
+    GSystem->printHandle = WinApi::GetStdHandle(WinApi::STD_OUTPUT_HANDLE);
     if (!GSystem->printHandle)
         CheckNoEntry();
 
-    GSystem->errorHandle = winapi::GetStdHandle(winapi::STD_ERROR_HANDLE);
+    GSystem->errorHandle = WinApi::GetStdHandle(WinApi::STD_ERROR_HANDLE);
     if (!GSystem->errorHandle)
         CheckNoEntry();
 }

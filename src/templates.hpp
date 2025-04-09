@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace aiva
+namespace Aiva
 {
     template <typename TType>
     struct TypeIdentity
@@ -37,4 +37,4 @@ namespace aiva
     template <typename TType>
     TType&& Forward(TType&& value) { return static_cast<TType&&>(value); }
 }
-// namespace aiva
+// namespace Aiva
