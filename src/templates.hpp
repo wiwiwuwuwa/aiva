@@ -36,5 +36,12 @@ namespace Aiva
 
     template <typename TType>
     TType&& Forward(TType&& value) { return static_cast<TType&&>(value); }
+
+
+    template <typename TType>
+    RemoveReference_t<TType>&& Move(TType&& value)
+    {
+        return static_cast<RemoveReference_t<TType>&&>(value);
+    }
 }
 // namespace Aiva
