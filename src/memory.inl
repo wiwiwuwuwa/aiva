@@ -18,7 +18,7 @@ namespace aiva::Memory
         : m_size{ size }, m_data{ &data }
     {
         if (size <= 0)
-            CheckNoEntryMsg("'size' is not valid");
+            CheckNoEntry();
     }
 
 
@@ -40,11 +40,8 @@ namespace aiva::Memory
     template <typename TType>
     constexpr TType& Span<TType>::operator[](size_t const index) const
     {
-        if (index < 0 || index >= m_size)
-            CheckNoEntryMsg("'index' is not valid");
-
-        if (!m_data)
-            CheckNoEntryMsg("'m_data' is not valid");
+        if (index < 0 || index >= m_size || !m_data)
+            CheckNoEntry();
 
         return m_data[index];
     }
@@ -54,7 +51,7 @@ namespace aiva::Memory
     constexpr TType& Span<TType>::GetData() const
     {
         if (!m_data)
-            CheckNoEntryMsg("'m_data' is not valid");
+            CheckNoEntry();
 
         return *m_data;
     }
@@ -81,7 +78,7 @@ namespace aiva::Memory
     Span<TType> AllocatorBase::CreateArray(size_t const size, TArgs&&... args) const
     {
         if (size <= 0)
-            CheckNoEntryMsg("'size' is not valid");
+            CheckNoEntry();
 
         TType& objects = reinterpret_cast<TType&>(Alloc(sizeof(TType) * size));
 
@@ -107,7 +104,7 @@ namespace aiva::Memory
     decltype(nullptr) AllocatorBase::DeleteArray(Span<TType> const& data) const
     {
         if (!data)
-            CheckNoEntryMsg("'data' is not valid");
+            CheckNoEntry();
 
         for (auto i = data.GetSize(); i > size_t{}; i--)
             data[i - 1].~TType();

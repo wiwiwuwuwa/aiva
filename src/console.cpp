@@ -1,5 +1,6 @@
 #include "console.hpp"
 #include "ensures.hpp"
+#include "memory.hpp"
 #include "strings.hpp"
 #include "winapi.hpp"
 
@@ -8,9 +9,19 @@ using namespace aiva;
 using namespace aiva::Console;
 
 
-static bool GInitialized{};
-static void* GPrintHandle;
-static void* GErrorHandle;
+namespace
+{
+    struct System final
+    {
+        void* printHandle{};
+        void* errorHandle{};
+    };
+}
+// namespace
+
+
+static Memory::MemoryAsObject<System> GSystemObject{};
+static System* GSystem{};
 
 
 static void Write(void*const handle, CstrView const message)
@@ -30,43 +41,45 @@ static void Write(void*const handle, CstrView const message)
 
 void Console::InitSystem()
 {
-    if (GInitialized)
+    if (GSystem)
         CheckNoEntry();
 
-    GPrintHandle = winapi::GetStdHandle(winapi::STD_OUTPUT_HANDLE);
-    if (!GPrintHandle)
+    GSystemObject.Construct();
+    GSystem = &GSystemObject.GetObject();
+
+    GSystem->printHandle = winapi::GetStdHandle(winapi::STD_OUTPUT_HANDLE);
+    if (!GSystem->printHandle)
         CheckNoEntry();
 
-    GErrorHandle = winapi::GetStdHandle(winapi::STD_ERROR_HANDLE);
-    if (!GErrorHandle)
+    GSystem->errorHandle = winapi::GetStdHandle(winapi::STD_ERROR_HANDLE);
+    if (!GSystem->errorHandle)
         CheckNoEntry();
-
-    GInitialized = true;
 }
 
 
 void Console::ShutSystem()
 {
-    if (!GInitialized)
+    if (!GSystem)
         CheckNoEntry();
 
-    GInitialized = false;
+    GSystem = nullptr;
+    GSystemObject.Destruct();
 }
 
 
 void Console::Print(CstrView const message)
 {
-    if (!GInitialized)
+    if (!GSystem)
         CheckNoEntry();
 
     if (message)
-        Write(GPrintHandle, message);
+        Write(GSystem->printHandle, message);
 }
 
 
 void Console::PrintLine(CstrView const message)
 {
-    if (!GInitialized)
+    if (!GSystem)
         CheckNoEntry();
 
     if (message)
@@ -78,21 +91,21 @@ void Console::PrintLine(CstrView const message)
 
 void Console::Error(CstrView const message)
 {
-    if (!GInitialized)
+    if (!GSystem)
         CheckNoEntry();
 
     if (message)
     {
-        Write(GErrorHandle, "\033[31m");
-        Write(GErrorHandle, message);
-        Write(GErrorHandle, "\033[0m");
+        Write(GSystem->errorHandle, "\033[31m");
+        Write(GSystem->errorHandle, message);
+        Write(GSystem->errorHandle, "\033[0m");
     }
 }
 
 
 void Console::ErrorLine(CstrView const message)
 {
-    if (!GInitialized)
+    if (!GSystem)
         CheckNoEntry();
 
     if (message)

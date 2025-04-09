@@ -20,28 +20,33 @@ namespace
         decltype(nullptr) Free(byte_t& data) const override;
 
     private:
-        void* m_heap;
+        void* m_heap{};
+    };
+
+    struct System final
+    {
+        HeapAllocator m_heapAlloc{};
     };
 }
 // namespace
 
 
-static bool GInitialized{};
-static MemoryAsObject<HeapAllocator> GHeapAllocator{};
+static MemoryAsObject<System> GSystemObject{};
+static System* GSystem{};
 
 
 HeapAllocator::HeapAllocator()
 {
     m_heap = winapi::HeapCreate({}, {}, {});
     if (!m_heap)
-        CheckNoEntryMsg("'winapi::HeapCreate' failed");
+        CheckNoEntry();
 }
 
 
 HeapAllocator::~HeapAllocator()
 {
     if (!winapi::HeapDestroy(m_heap))
-        CheckNoEntryMsg("'winapi::HeapDestroy' failed");
+        CheckNoEntry();
 }
 
 
@@ -49,7 +54,7 @@ byte_t& HeapAllocator::Alloc(size_t const size) const
 {
     auto const data = winapi::HeapAlloc(m_heap, {}, size);
     if (!data)
-        CheckNoEntryMsg("'winapi::HeapAlloc' failed");
+        CheckNoEntry();
 
     return *reinterpret_cast<byte_t*>(data);
 }
@@ -59,7 +64,7 @@ byte_t& HeapAllocator::Realloc(byte_t& data, size_t const size) const
 {
     auto const newData = winapi::HeapReAlloc(m_heap, {}, &data, size);
     if (!newData)
-        CheckNoEntryMsg("'winapi::HeapReAlloc' failed");
+        CheckNoEntry();
 
     return *reinterpret_cast<byte_t*>(newData);
 }
@@ -68,7 +73,7 @@ byte_t& HeapAllocator::Realloc(byte_t& data, size_t const size) const
 decltype(nullptr) HeapAllocator::Free(byte_t& data) const
 {
     if (!winapi::HeapFree(m_heap, {}, &data))
-        CheckNoEntryMsg("'winapi::HeapFree' failed");
+        CheckNoEntry();
 
     return nullptr;
 }
@@ -76,55 +81,55 @@ decltype(nullptr) HeapAllocator::Free(byte_t& data) const
 
 byte_t& AllocatorBase::Alloc(size_t const) const
 {
-    CheckNoEntryMsg("Not implemented");
+    CheckNoEntry();
 }
 
 
 byte_t& AllocatorBase::Realloc(byte_t&, size_t const) const
 {
-    CheckNoEntryMsg("Not implemented");
+    CheckNoEntry();
 }
 
 
 decltype(nullptr) AllocatorBase::Free(byte_t&) const
 {
-    CheckNoEntryMsg("Not implemented");
+    CheckNoEntry();
 }
 
 
 void Memory::InitSystem()
 {
-    if (GInitialized)
-        CheckNoEntryMsg("Memory system is already initialized");
+    if (GSystem)
+        CheckNoEntry();
 
-    GHeapAllocator.Construct();
-    GInitialized = true;
+    GSystemObject.Construct();
+    GSystem = &GSystemObject.GetObject();
 }
 
 
 void Memory::ShutSystem()
 {
-    if (!GInitialized)
-        CheckNoEntryMsg("Memory system is not initialized");
+    if (!GSystem)
+        CheckNoEntry();
 
-    GHeapAllocator.Destruct();
-    GInitialized = false;
+    GSystem = nullptr;
+    GSystemObject.Destruct();
 }
 
 
 AllocatorBase const& Memory::GetHeapAlloc()
 {
-    if (!GInitialized)
-        CheckNoEntryMsg("Memory system is not initialized");
+    if (!GSystem)
+        CheckNoEntry();
 
-    return GHeapAllocator.GetObject();
+    return GSystem->m_heapAlloc;
 }
 
 
 void* operator new(size_t const size)
 {
     if (size <= 0)
-        CheckNoEntryMsg("'size' is not valid");
+        CheckNoEntry();
 
     return &GetHeapAlloc().Alloc(size);
 }
@@ -133,7 +138,7 @@ void* operator new(size_t const size)
 void* operator new(size_t const size, void *const ptr)
 {
     if (size <= 0)
-        CheckNoEntryMsg("'size' is not valid");
+        CheckNoEntry();
 
     return ptr;
 }
@@ -141,11 +146,8 @@ void* operator new(size_t const size, void *const ptr)
 
 void operator delete(void *const ptr, size_t const size)
 {
-    if (!ptr)
-        CheckNoEntryMsg("'ptr' is not valid");
-
-    if (size <= 0)
-        CheckNoEntryMsg("'size' is not valid");
+    if (!ptr || size <= 0)
+        CheckNoEntry();
 
     GetHeapAlloc().Free(*reinterpret_cast<byte_t*>(ptr));
 }
