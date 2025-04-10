@@ -61,5 +61,26 @@ namespace Aiva
     {
         return m_size;
     }
+
+
+    template <typename TDst, typename TSrc>
+    constexpr Span<TDst> CastSpan(Span<TSrc> const span)
+    {
+        if (!span)
+            return {};
+
+        auto const bytesCount = sizeof(TSrc) * span.GetSize();
+        if (bytesCount % sizeof(TDst))
+            CheckNoEntry();
+
+        auto const dataAddr = reinterpret_cast<uintptr_t>(&span.GetData());
+        if (dataAddr % alignof(TDst))
+            CheckNoEntry();
+
+        auto& data = reinterpret_cast<TDst&>(span.GetData());
+        auto const size = bytesCount / sizeof(TDst);
+
+        return Span<TDst>{ size, data };
+    }
 }
 // namespace Aiva

@@ -2,6 +2,7 @@
 #include "AllocatorBase.hpp"
 #include "Ensures.hpp"
 #include "MemoryAsObject.hpp"
+#include "Span.hpp"
 #include "WinApi.hpp"
 
 
@@ -17,9 +18,9 @@ namespace
         HeapAllocator();
         ~HeapAllocator() override;
 
-        byte_t& Alloc(size_t const size) const override;
-        byte_t& Realloc(byte_t& data, size_t const size) const override;
-        decltype(nullptr) Free(byte_t& data) const override;
+        Span<byte_t> Alloc(size_t const size) const override;
+        Span<byte_t> Realloc(Span<byte_t> span, size_t const size) const override;
+        decltype(nullptr) Free(Span<byte_t> span) const override;
 
     private:
         void* m_heap{};
@@ -52,29 +53,29 @@ HeapAllocator::~HeapAllocator()
 }
 
 
-byte_t& HeapAllocator::Alloc(size_t const size) const
+Span<byte_t> HeapAllocator::Alloc(size_t const size) const
 {
     auto const data = WinApi::HeapAlloc(m_heap, {}, size);
     if (!data)
         CheckNoEntry();
 
-    return *reinterpret_cast<byte_t*>(data);
+    return Span<byte_t>{ size, *reinterpret_cast<byte_t*>(data) };
 }
 
 
-byte_t& HeapAllocator::Realloc(byte_t& data, size_t const size) const
+Span<byte_t> HeapAllocator::Realloc(Span<byte_t> span, size_t const size) const
 {
-    auto const newData = WinApi::HeapReAlloc(m_heap, {}, &data, size);
+    auto const newData = WinApi::HeapReAlloc(m_heap, {}, &span.GetData(), size);
     if (!newData)
         CheckNoEntry();
 
-    return *reinterpret_cast<byte_t*>(newData);
+    return Span<byte_t>{ size, *reinterpret_cast<byte_t*>(newData) };
 }
 
 
-decltype(nullptr) HeapAllocator::Free(byte_t& data) const
+decltype(nullptr) HeapAllocator::Free(Span<byte_t> span) const
 {
-    if (!WinApi::HeapFree(m_heap, {}, &data))
+    if (!WinApi::HeapFree(m_heap, {}, &span.GetData()))
         CheckNoEntry();
 
     return nullptr;

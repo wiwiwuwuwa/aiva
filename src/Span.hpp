@@ -21,6 +21,10 @@ namespace Aiva
         size_t m_size;
         TType* m_data;
     };
+
+
+    template <typename TDst, typename TSrc>
+    constexpr Span<TDst> CastSpan(Span<TSrc> const span);
 }
 // namespace Aiva
 

@@ -13,7 +13,11 @@ void* operator new(size_t const size)
     if (size <= 0)
         CheckNoEntry();
 
-    return &GetHeapAlloc().Alloc(size);
+    auto const spanOfBytes = GetHeapAlloc().Alloc(size);
+    if (!spanOfBytes)
+        CheckNoEntry();
+
+    return &spanOfBytes.GetData();
 }
 
 
@@ -31,5 +35,9 @@ void operator delete(void *const ptr, size_t const size)
     if (!ptr || size <= 0)
         CheckNoEntry();
 
-    GetHeapAlloc().Free(*reinterpret_cast<byte_t*>(ptr));
+    auto const spanOfBytes = Span<byte_t>{ size, *reinterpret_cast<byte_t*>(ptr) };
+    if (!spanOfBytes)
+        CheckNoEntry();
+
+    GetHeapAlloc().Free(spanOfBytes);
 }

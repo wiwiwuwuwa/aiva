@@ -4,19 +4,19 @@
 using namespace Aiva;
 
 
-byte_t& AllocatorBase::Alloc(size_t const) const
+Span<byte_t> AllocatorBase::Alloc(size_t const) const
 {
     CheckNoEntry();
 }
 
 
-byte_t& AllocatorBase::Realloc(byte_t&, size_t const) const
+Span<byte_t> AllocatorBase::Realloc(Span<byte_t>, size_t const) const
 {
     CheckNoEntry();
 }
 
 
-decltype(nullptr) AllocatorBase::Free(byte_t&) const
+decltype(nullptr) AllocatorBase::Free(Span<byte_t>) const
 {
     CheckNoEntry();
 }

@@ -8,9 +8,9 @@ namespace Aiva
     class AllocatorBase
     {
     public:
-        virtual byte_t& Alloc(size_t const size) const;
-        virtual byte_t& Realloc(byte_t& data, size_t const size) const;
-        virtual decltype(nullptr) Free(byte_t& data) const;
+        virtual Span<byte_t> Alloc(size_t const size) const;
+        virtual Span<byte_t> Realloc(Span<byte_t> const span, size_t const size) const;
+        virtual decltype(nullptr) Free(Span<byte_t> const span) const;
 
     public:
         template <typename TType, typename... TArgs>
