@@ -15,7 +15,7 @@ void* operator new(size_t const size)
 }
 
 
-void* operator new(size_t const size, void *const ptr)
+void* operator new(size_t const, void *const ptr)
 {
     return ptr;
 }

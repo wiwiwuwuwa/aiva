@@ -1,5 +1,5 @@
 #include "Console.hpp"
-#include "Ensures.hpp"
+#include "Process.hpp"
 #include "RawObject.hpp"
 #include "WinApi.hpp"
 
@@ -27,32 +27,32 @@ static void Write(void*const handle, CstrView const message)
 {
     auto written = uint32_t{};
     if (!WinApi::WriteFile(handle, message, StrLen(message), &written, nullptr))
-        CheckNoEntry();
+        Process::ExitFailure();
 }
 
 
 void Console::InitSystem()
 {
     if (GSystem)
-        CheckNoEntry();
+        Process::ExitFailure();
 
     GSystemObject.Construct();
     GSystem = &GSystemObject.GetObject();
 
     GSystem->printHandle = WinApi::GetStdHandle(WinApi::STD_OUTPUT_HANDLE);
     if (!GSystem->printHandle)
-        CheckNoEntry();
+        Process::ExitFailure();
 
     GSystem->errorHandle = WinApi::GetStdHandle(WinApi::STD_ERROR_HANDLE);
     if (!GSystem->errorHandle)
-        CheckNoEntry();
+        Process::ExitFailure();
 }
 
 
 void Console::ShutSystem()
 {
     if (!GSystem)
-        CheckNoEntry();
+        Process::ExitFailure();
 
     GSystem = nullptr;
     GSystemObject.Destruct();
@@ -62,7 +62,7 @@ void Console::ShutSystem()
 void Console::Print(CstrView const message)
 {
     if (!GSystem)
-        CheckNoEntry();
+        Process::ExitFailure();
 
     Write(GSystem->printHandle, message);
 }
@@ -71,7 +71,7 @@ void Console::Print(CstrView const message)
 void Console::PrintLine(CstrView const message)
 {
     if (!GSystem)
-        CheckNoEntry();
+        Process::ExitFailure();
 
     Print(message);
     Print("\n");
@@ -81,7 +81,7 @@ void Console::PrintLine(CstrView const message)
 void Console::Error(CstrView const message)
 {
     if (!GSystem)
-        CheckNoEntry();
+        Process::ExitFailure();
 
     Write(GSystem->errorHandle, "\033[31m");
     Write(GSystem->errorHandle, message);
@@ -92,7 +92,7 @@ void Console::Error(CstrView const message)
 void Console::ErrorLine(CstrView const message)
 {
     if (!GSystem)
-        CheckNoEntry();
+        Process::ExitFailure();
 
     Error(message);
     Error("\n");

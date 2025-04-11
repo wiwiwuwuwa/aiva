@@ -5,20 +5,9 @@
 
 #define CheckNoEntry() \
 { \
+    Aiva::Console::Error(__FILE__); \
+    Aiva::Console::Error(": "); \
+    Aiva::Console::Error(__func__); \
+    Aiva::Console::Error(": Check No Entry.\n"); \
     Aiva::Process::ExitFailure(); \
-} \
-
-
-#define CheckNoEntryMsg(msg) \
-{ \
-    if (msg) \
-    { \
-        Aiva::Console::Error(__FILE__); \
-        Aiva::Console::Error(": "); \
-        Aiva::Console::Error(__func__); \
-        Aiva::Console::Error(": "); \
-        Aiva::Console::Error(msg); \
-        Aiva::Console::Error(".\n"); \
-    } \
-    CheckNoEntry(); \
 } \
