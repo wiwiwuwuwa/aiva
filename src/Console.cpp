@@ -1,6 +1,6 @@
 #include "Console.hpp"
 #include "Ensures.hpp"
-#include "MemoryAsObject.hpp"
+#include "RawObject.hpp"
 #include "WinApi.hpp"
 
 
@@ -19,7 +19,7 @@ namespace
 // namespace
 
 
-static MemoryAsObject<System> GSystemObject{};
+static RawObject<System> GSystemObject{};
 static System* GSystem{};
 
 

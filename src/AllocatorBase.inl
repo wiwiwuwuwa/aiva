@@ -50,7 +50,7 @@ namespace Aiva
 
 
     template <typename TType>
-    decltype(nullptr) AllocatorBase::Delete(TType& data) const
+    nullptr_t AllocatorBase::Delete(TType& data) const
     {
         auto const spanOfObject = Span{ data };
         if (!spanOfObject)
@@ -67,7 +67,7 @@ namespace Aiva
 
 
     template <typename TType>
-    decltype(nullptr) AllocatorBase::DeleteArray(Span<TType> const& data) const
+    nullptr_t AllocatorBase::DeleteArray(Span<TType> const& data) const
     {
         if (!data)
             CheckNoEntry();

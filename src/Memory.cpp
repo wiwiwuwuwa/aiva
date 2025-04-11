@@ -1,7 +1,7 @@
 #include "Memory.hpp"
 #include "AllocatorBase.hpp"
 #include "Ensures.hpp"
-#include "MemoryAsObject.hpp"
+#include "RawObject.hpp"
 #include "Span.hpp"
 #include "WinApi.hpp"
 
@@ -19,8 +19,7 @@ namespace
         ~HeapAllocator() override;
 
         Span<byte_t> Alloc(size_t const size) const override;
-        Span<byte_t> Realloc(Span<byte_t> span, size_t const size) const override;
-        decltype(nullptr) Free(Span<byte_t> span) const override;
+        nullptr_t Free(Span<byte_t> span) const override;
 
     private:
         void* m_heap{};
@@ -34,7 +33,7 @@ namespace
 // namespace
 
 
-static MemoryAsObject<System> GSystemObject{};
+static RawObject<System> GSystemObject{};
 static System* GSystem{};
 
 
@@ -63,17 +62,7 @@ Span<byte_t> HeapAllocator::Alloc(size_t const size) const
 }
 
 
-Span<byte_t> HeapAllocator::Realloc(Span<byte_t> span, size_t const size) const
-{
-    auto const newData = WinApi::HeapReAlloc(m_heap, {}, &span.GetData(), size);
-    if (!newData)
-        CheckNoEntry();
-
-    return Span<byte_t>{ size, *reinterpret_cast<byte_t*>(newData) };
-}
-
-
-decltype(nullptr) HeapAllocator::Free(Span<byte_t> span) const
+nullptr_t HeapAllocator::Free(Span<byte_t> span) const
 {
     if (!WinApi::HeapFree(m_heap, {}, &span.GetData()))
         CheckNoEntry();

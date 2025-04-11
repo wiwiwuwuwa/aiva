@@ -1,8 +1,12 @@
 #pragma once
 
 
-namespace Aiva
+namespace Aiva::Templates
 {
+    // ========================================================================
+    // Basic
+    // ========================================================================
+
     template <typename TType>
     struct TypeIdentity
     {
@@ -31,17 +35,78 @@ namespace Aiva
 
 
     template <typename TType>
-    TType&& Forward(TType& value) { return static_cast<TType&&>(value); }
+    constexpr TType&& Forward(TType& value);
 
 
     template <typename TType>
-    TType&& Forward(TType&& value) { return static_cast<TType&&>(value); }
+    constexpr TType&& Forward(TType&& value);
 
 
     template <typename TType>
-    RemoveReference_t<TType>&& Move(TType&& value)
+    constexpr RemoveReference_t<TType>&& Move(TType&& value);
+
+    // ========================================================================
+    // Numbers
+    // ========================================================================
+
+    enum class NumberType
     {
-        return static_cast<RemoveReference_t<TType>&&>(value);
-    }
+        Int,
+        Flt,
+        MAX,
+    };
+
+
+    enum class NumberSign
+    {
+        None,
+        Sign,
+        MAX,
+    };
+
+
+    enum class NumberSize
+    {
+        Byte1,
+        Byte2,
+        Byte4,
+        Byte8,
+        MAX,
+    };
+
+
+    template <typename TType>
+    constexpr bool IsInteger();
+
+
+    template <typename TType>
+    constexpr bool IsFloating();
+
+
+    template <typename TType>
+    constexpr bool IsUnsigned();
+
+
+    template <typename TType>
+    constexpr bool IsSigned();
+
+
+    template <typename TType>
+    constexpr NumberType GetNumberType();
+
+
+    template <typename TType>
+    constexpr NumberSign GetNumberSign();
+
+
+    template <typename TType>
+    constexpr NumberSize GetNumberSize();
+
+
+    template <NumberType TType, NumberSign TSign, NumberSize TSize>
+    constexpr auto CreateNumber();
 }
-// namespace Aiva
+// namespace Aiva::Templates
+
+
+#include "Templates.inl"

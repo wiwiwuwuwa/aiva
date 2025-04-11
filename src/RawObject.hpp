@@ -5,7 +5,7 @@
 namespace Aiva
 {
     template <typename TType>
-    class MemoryAsObject final
+    class RawObject final
     {
     public:
         template <typename... TArgs>
@@ -22,4 +22,4 @@ namespace Aiva
 // namespace Aiva
 
 
-#include "MemoryAsObject.inl"
+#include "RawObject.inl"
