@@ -10,34 +10,19 @@ using namespace Aiva::Memory;
 
 void* operator new(size_t const size)
 {
-    if (size <= 0)
-        CheckNoEntry();
-
     auto const spanOfBytes = GetHeapAlloc().Alloc(size);
-    if (!spanOfBytes)
-        CheckNoEntry();
-
     return &spanOfBytes.GetData();
 }
 
 
 void* operator new(size_t const size, void *const ptr)
 {
-    if (size <= 0)
-        CheckNoEntry();
-
     return ptr;
 }
 
 
 void operator delete(void *const ptr, size_t const size)
 {
-    if (!ptr || size <= 0)
-        CheckNoEntry();
-
     auto const spanOfBytes = Span<byte_t>{ size, *reinterpret_cast<byte_t*>(ptr) };
-    if (!spanOfBytes)
-        CheckNoEntry();
-
     GetHeapAlloc().Free(spanOfBytes);
 }

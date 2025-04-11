@@ -9,13 +9,10 @@ using namespace Aiva::Process;
 
 [[noreturn]] void Process::Exit(uintptr_t const code, CstrView const message)
 {
-    if (message)
-    {
-        if (code == 0)
-            Console::PrintLine(message);
-        else
-            Console::ErrorLine(message);
-    }
+    if (code == 0)
+        Console::PrintLine(message);
+    else
+        Console::ErrorLine(message);
 
     WinApi::ExitProcess((uint32_t)code);
 }

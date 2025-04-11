@@ -43,6 +43,7 @@ extern "C" { namespace Aiva::WinApi
     int __stdcall HeapDestroy(void *const hHeap);
     int __stdcall HeapFree(void *const hHeap, uint32_t const dwFlags, void *const lpMem);
     void* __stdcall HeapReAlloc(void* const hHeap, uint32_t const dwFlags, void* const lpMem, size_t const dwBytes);
+    int __stdcall TerminateThread(void *const hThread, uint32_t const uExitCode);
     int __stdcall WriteFile(void *const hFile, void const*const lpBuffer, uint32_t const nNumberOfBytesToWrite, uint32_t *const lpNumberOfBytesWritten, void *const lpOverlapped);
 }}
 // extern "C" { namespace Aiva

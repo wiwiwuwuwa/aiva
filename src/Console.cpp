@@ -25,14 +25,7 @@ static System* GSystem{};
 
 static void Write(void*const handle, CstrView const message)
 {
-    if (handle == WinApi::INVALID_HANDLE_VALUE)
-        CheckNoEntry();
-
-    if (!message)
-        return;
-
     auto written = uint32_t{};
-
     if (!WinApi::WriteFile(handle, message, StrLen(message), &written, nullptr))
         CheckNoEntry();
 }
@@ -71,8 +64,7 @@ void Console::Print(CstrView const message)
     if (!GSystem)
         CheckNoEntry();
 
-    if (message)
-        Write(GSystem->printHandle, message);
+    Write(GSystem->printHandle, message);
 }
 
 
@@ -81,9 +73,7 @@ void Console::PrintLine(CstrView const message)
     if (!GSystem)
         CheckNoEntry();
 
-    if (message)
-        Print(message);
-
+    Print(message);
     Print("\n");
 }
 
@@ -93,12 +83,9 @@ void Console::Error(CstrView const message)
     if (!GSystem)
         CheckNoEntry();
 
-    if (message)
-    {
-        Write(GSystem->errorHandle, "\033[31m");
-        Write(GSystem->errorHandle, message);
-        Write(GSystem->errorHandle, "\033[0m");
-    }
+    Write(GSystem->errorHandle, "\033[31m");
+    Write(GSystem->errorHandle, message);
+    Write(GSystem->errorHandle, "\033[0m");
 }
 
 
@@ -107,8 +94,6 @@ void Console::ErrorLine(CstrView const message)
     if (!GSystem)
         CheckNoEntry();
 
-    if (message)
-        Error(message);
-
+    Error(message);
     Error("\n");
 }

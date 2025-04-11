@@ -11,6 +11,7 @@ namespace Aiva
         constexpr Span();
         constexpr Span(size_t const size, TType& data);
         constexpr Span(TType& data);
+        constexpr Span(nullptr_t const);
 
         constexpr operator bool() const;
         constexpr TType& operator[](size_t const index) const;

@@ -30,6 +30,14 @@ namespace Aiva
 
 
     template <typename TType>
+    constexpr Span<TType>::Span(nullptr_t const)
+        : m_size{ 0 }, m_data{ nullptr }
+    {
+
+    }
+
+
+    template <typename TType>
     constexpr Span<TType>::operator bool() const
     {
         return m_size > 0 && m_data;
@@ -39,7 +47,7 @@ namespace Aiva
     template <typename TType>
     constexpr TType& Span<TType>::operator[](size_t const index) const
     {
-        if (index < 0 || index >= m_size || !m_data)
+        if (!(*this))
             CheckNoEntry();
 
         return m_data[index];
@@ -49,7 +57,7 @@ namespace Aiva
     template <typename TType>
     constexpr TType& Span<TType>::GetData() const
     {
-        if (!m_data)
+        if (!(*this))
             CheckNoEntry();
 
         return *m_data;
