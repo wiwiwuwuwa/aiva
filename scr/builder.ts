@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 const PATH_COMPILER = path.join(`C:`, `Program Files`, `LLVM`, `bin`, `clang++.exe`);
+const PATH_CLANG_INCS = path.join(`C:`, `Program Files`, `LLVM`, `lib`, `clang`, `20`, `include`);
 const PATH_WINDOWS_SDK_LIBS = path.join(`C:`, `Program Files (x86)`, `Windows Kits`, `10`, `Lib`, `10.0.26100.0`, `um`, `x64`);
 
 async function executeCommand(cwd: string, command: string, args: string[]): Promise<void>
@@ -117,7 +118,7 @@ try
     ({
         cwd: path.join(__dirname, `..`),
         gccPath: PATH_COMPILER,
-        incPaths: [],
+        incPaths: [ PATH_CLANG_INCS ],
         defEntries: [],
         srcPaths: [ path.join(__dirname, `..`, `src`) ],
         libPaths: [ PATH_WINDOWS_SDK_LIBS ],

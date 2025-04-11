@@ -36,15 +36,12 @@ extern "C" { namespace Aiva::WinApi
 
     void* __stdcall CreateThread(void *const lpThreadAttributes, size_t const dwStackSize, uint32_t (__stdcall *lpStartAddress)(void*), void *const lpParameter, uint32_t const dwCreationFlags, uint32_t *const lpThreadId);
     [[noreturn]] void __stdcall ExitProcess(uint32_t const uExitCode);
-    uint32_t __stdcall GetLastError();
     void* __stdcall GetStdHandle(uint32_t const nStdHandle);
     void __stdcall GetSystemInfo(SYSTEM_INFO* const lpSystemInfo);
     void* __stdcall HeapAlloc(void *const hHeap, uint32_t const dwFlags, size_t const dwBytes);
     void* __stdcall HeapCreate(uint32_t const flOptions, size_t const dwInitialSize, size_t const dwMaximumSize);
     int __stdcall HeapDestroy(void *const hHeap);
     int __stdcall HeapFree(void *const hHeap, uint32_t const dwFlags, void *const lpMem);
-    void* __stdcall HeapReAlloc(void* const hHeap, uint32_t const dwFlags, void* const lpMem, size_t const dwBytes);
-    int __stdcall TerminateThread(void *const hThread, uint32_t const uExitCode);
     uint32_t __stdcall WaitForMultipleObjects(uint32_t const nCount, void const*const*const lpHandles, int const bWaitAll, uint32_t const dwMilliseconds);
     int __stdcall WriteFile(void *const hFile, void const*const lpBuffer, uint32_t const nNumberOfBytesToWrite, uint32_t *const lpNumberOfBytesWritten, void *const lpOverlapped);
 }}

@@ -8,7 +8,6 @@ namespace Aiva::Coroutines
 
 
     void InitSystem();
-    void WaitSystem();
     void ShutSystem();
 
     void Start(CoroutineAction_t coroutineAction, uintptr_t const userData);

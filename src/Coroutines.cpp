@@ -2,6 +2,7 @@
 
 #include "AllocatorBase.hpp"
 #include "Ensures.hpp"
+#include "Intrin.hpp"
 #include "Memory.hpp"
 #include "RawObject.hpp"
 #include "Span.hpp"
@@ -16,6 +17,7 @@ namespace
 {
     struct System final
     {
+        volatile long m_exitFlag{};
         Span<uintptr_t> m_threads{};
     };
 }
@@ -38,22 +40,10 @@ static size_t GetNumberOfCores()
 #include "Console.hpp"
 static uint32_t __stdcall ThreadAction(void *const)
 {
-    CstrView strings[] =
+    while (!InterlockedCompareExchange(&GSystem->m_exitFlag, 0L, 0L))
     {
-        " one ",
-        " two ",
-        " three ",
-        " four ",
-        " five ",
-        " six ",
-        " seven ",
-        " eight ",
-        " nine ",
-        " ten ",
-    };
-
-    for (auto const string : strings)
-        Console::Print(string);
+        Console::Print(" da ");
+    }
 
     return {};
 }
@@ -80,33 +70,19 @@ void Coroutines::InitSystem()
 }
 
 
-void Coroutines::WaitSystem()
-{
-    if (!GSystem)
-        CheckNoEntry();
-
-    auto const nCount = (uint32_t)GSystem->m_threads.GetSize();
-    auto const lpHandles = (void const*const*const)&GSystem->m_threads.GetData();
-
-    auto const result = WinApi::WaitForMultipleObjects(nCount, lpHandles, true, WinApi::INFINITE);
-    if (result == WinApi::WAIT_FAILED)
-        CheckNoEntry();
-}
-
-
 void Coroutines::ShutSystem()
 {
     if (!GSystem)
         CheckNoEntry();
 
-    for (auto i = GSystem->m_threads.GetSize(); i > 0; i--)
-    {
-        auto const success = WinApi::TerminateThread((void*)GSystem->m_threads[i - 1], {});
-        if (!success)
-            CheckNoEntry();
+    if (InterlockedExchange(&GSystem->m_exitFlag, 1L))
+        CheckNoEntry();
 
-        GSystem->m_threads[i - 1] = {};
-    }
+    auto const nCount = (uint32_t)GSystem->m_threads.GetSize();
+    auto const lpHandles = (void const*const*const)&GSystem->m_threads.GetData();
+
+    if (WinApi::WaitForMultipleObjects(nCount, lpHandles, true, WinApi::INFINITE) == WinApi::WAIT_FAILED)
+        CheckNoEntry();
 
     GSystem->m_threads = Memory::GetHeapAlloc().DeleteArray(GSystem->m_threads);
 
