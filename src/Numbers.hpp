@@ -3,10 +3,10 @@
 
 
 #define AIVA_MAKE_NUMBER(name, type, sign, size) \
-    using name = decltype(Aiva::Templates::CreateNumber<Aiva::Templates::NumberType::type, Aiva::Templates::NumberSign::sign, Aiva::Templates::NumberSize::size>()); \
+    using name = Aiva::Templates::NumberIdentity_t<Aiva::Templates::NumberType::type, Aiva::Templates::NumberSign::sign, Aiva::Templates::NumberSize::size>; \
 
 #define AIVA_MAKE_NUMBER_PTR(name, type, sign) \
-    using name = decltype(Aiva::Templates::CreateNumber<Aiva::Templates::NumberType::type, Aiva::Templates::NumberSign::sign, Aiva::Templates::GetNumberSize<void*>()>()); \
+    using name = Aiva::Templates::NumberIdentity_t<Aiva::Templates::NumberType::type, Aiva::Templates::NumberSign::sign, Aiva::Templates::GetNumberSize<void*>()>; \
 
 namespace Aiva
 {

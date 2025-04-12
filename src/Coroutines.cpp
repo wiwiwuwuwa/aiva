@@ -15,13 +15,6 @@ using namespace Aiva::Coroutines;
 
 namespace
 {
-    enum class ExitFlag : uintptr_t
-    {
-        kNone,
-        kExit,
-    };
-
-
     struct ThreadContext final
     {
         volatile uintptr_t threadHandle{};
@@ -34,7 +27,7 @@ namespace
         uint32_t tlsHandle{ WinApi::TLS_OUT_OF_INDEXES };
         Span<ThreadContext> threadContexts{};
 
-        volatile uintptr_t exitFlag{};
+        volatile bool exitFlag{};
     };
 }
 // namespace
@@ -66,7 +59,7 @@ static uint32_t __stdcall ThreadAction(void *const threadIndex)
 
     Intrin::AtomicExchange(&threadContext.fiberHandle, fiberHandle);
 
-    while (Intrin::AtomicCompareExchange(&GSystem->exitFlag, {}, {}) != (uintptr_t)ExitFlag::kExit)
+    while (Intrin::AtomicCompareExchange(&GSystem->exitFlag, {}, {}) != false)
         Intrin::YieldProcessor();
 
     Intrin::AtomicExchange(&threadContext.fiberHandle, {});
@@ -112,14 +105,14 @@ static void InitThreadContexts()
 
 static void InitExitFlag()
 {
-    if (Intrin::AtomicExchange(&GSystem->exitFlag, false) == true)
+    if (Intrin::AtomicExchange(&GSystem->exitFlag, false) != false)
         CheckNoEntry();
 }
 
 
 static void ShutExitFlag()
 {
-    if (Intrin::AtomicExchange(&GSystem->exitFlag, true) == true)
+    if (Intrin::AtomicExchange(&GSystem->exitFlag, true) != false)
         CheckNoEntry();
 }
 
