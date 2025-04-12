@@ -7,7 +7,7 @@
 namespace Aiva::Intrin
 {
     template <typename TType>
-    TType AtomicCompareExchange(volatile TType *const Destination, TType const Comperand, TType const Exchange)
+    inline TType AtomicCompareExchange(volatile TType *const Destination, TType const Comperand, TType const Exchange)
     {
         using namespace Aiva::Templates;
         using NumberIdentity_t = NumberIdentity_t<NumberType::Int, NumberSign::None, GetNumberSize<TType>()>;
@@ -22,7 +22,7 @@ namespace Aiva::Intrin
 
 
     template <typename TType>
-    TType AtomicExchange(volatile TType *const Destination, TType const Exchange)
+    inline TType AtomicExchange(volatile TType *const Destination, TType const Exchange)
     {
         using namespace Aiva::Templates;
         using NumberIdentity_t = NumberIdentity_t<NumberType::Int, NumberSign::None, GetNumberSize<TType>()>;
@@ -36,7 +36,7 @@ namespace Aiva::Intrin
     }
 
 
-    void YieldProcessor()
+    inline void YieldProcessor()
     {
         __builtin_ia32_pause();
     }
