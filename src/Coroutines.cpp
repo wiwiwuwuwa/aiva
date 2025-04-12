@@ -15,10 +15,17 @@ using namespace Aiva::Coroutines;
 
 namespace
 {
+    struct Thread final
+    {
+        volatile uintptr_t isLocked{};
+        volatile uintptr_t handle{};
+        volatile uintptr_t fiberHandle{};
+    };
+
     struct System final
     {
-        volatile long m_exitFlag{};
-        Span<uintptr_t> m_threads{};
+        volatile uintptr_t exitFlag{};
+        Span<Thread> threads{};
     };
 }
 // namespace
@@ -37,13 +44,29 @@ static size_t GetNumberOfCores()
 }
 
 
-#include "Console.hpp"
-static uint32_t __stdcall ThreadAction(void *const)
+static uint32_t __stdcall ThreadAction(void *const threadIndex)
 {
-    while (!InterlockedCompareExchange(&GSystem->m_exitFlag, 0L, 0L))
+    auto& thread = GSystem->threads[(size_t)threadIndex];
+
+    thread.fiberHandle = (uintptr_t)WinApi::ConvertThreadToFiber(nullptr);
+    if (!thread.fiberHandle)
+        CheckNoEntry();
+
+    if (!Intrin::AtomicExchange(&thread.isLocked, false))
+        CheckNoEntry();
+
+    while (!Intrin::AtomicCompareExchange(&GSystem->exitFlag, false, false))
     {
         Console::Print(" da ");
+        Intrin::YieldProcessor();
     }
+
+    if (Intrin::AtomicExchange(&thread.isLocked, true))
+        CheckNoEntry();
+
+    if (!WinApi::ConvertFiberToThread())
+        CheckNoEntry();
+    thread.fiberHandle = {};
 
     return {};
 }
@@ -57,15 +80,17 @@ void Coroutines::InitSystem()
     GSystemObject.Construct();
     GSystem = &GSystemObject.GetObject();
 
-    GSystem->m_threads = Memory::GetHeapAlloc().CreateArray<uintptr_t>(GetNumberOfCores());
+    GSystem->threads = Memory::GetHeapAlloc().CreateArray<Thread>(GetNumberOfCores());
 
-    for (auto i = size_t{}; i < GSystem->m_threads.GetSize(); i++)
+    for (auto i = size_t{}; i < GSystem->threads.GetSize(); i++)
     {
-        auto const threadHandle = (uintptr_t)WinApi::CreateThread({}, {}, ThreadAction, (void*)(uintptr_t)i, {}, {});
-        if (!threadHandle)
-            CheckNoEntry();
+        auto& thread = GSystem->threads[i];
 
-        GSystem->m_threads[i] = threadHandle;
+        thread.isLocked = true;
+        thread.handle = (uintptr_t)WinApi::CreateThread({}, 16384, ThreadAction, (void*)i, {}, {});
+
+        if (!thread.handle)
+            CheckNoEntry();
     }
 }
 
@@ -75,29 +100,40 @@ void Coroutines::ShutSystem()
     if (!GSystem)
         CheckNoEntry();
 
-    if (InterlockedExchange(&GSystem->m_exitFlag, 1L))
+    if (Intrin::AtomicExchange(&GSystem->exitFlag, true))
         CheckNoEntry();
 
-    auto const nCount = (uint32_t)GSystem->m_threads.GetSize();
-    auto const lpHandles = (void const*const*const)&GSystem->m_threads.GetData();
+    for (auto i = GSystem->threads.GetSize(); i > 0; i--)
+    {
+        auto& thread = GSystem->threads[i - 1];
 
-    if (WinApi::WaitForMultipleObjects(nCount, lpHandles, true, WinApi::INFINITE) == WinApi::WAIT_FAILED)
-        CheckNoEntry();
+        if (WinApi::WaitForSingleObject((void*)thread.handle, WinApi::INFINITE) == WinApi::WAIT_FAILED)
+            CheckNoEntry();
 
-    GSystem->m_threads = Memory::GetHeapAlloc().DeleteArray(GSystem->m_threads);
+        thread.handle = {};
+        thread.isLocked = false;
+    }
+
+    GSystem->threads = Memory::GetHeapAlloc().DeleteArray(GSystem->threads);
 
     GSystem = nullptr;
     GSystemObject.Destruct();
 }
 
 
-void Coroutines::Start(CoroutineAction_t, uintptr_t const)
+void Coroutines::Spawn(CoroutineAction_t, uintptr_t const)
 {
     CheckNoEntry();
 }
 
 
 void Coroutines::Yield()
+{
+    CheckNoEntry();
+}
+
+
+void Coroutines::Close()
 {
     CheckNoEntry();
 }
