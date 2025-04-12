@@ -64,7 +64,7 @@ static uint32_t __stdcall ThreadAction(void *const threadIndex)
         auto const usrFiberHandle = thread.usrFiberHandle;
         thread.usrFiberHandle = {};
 
-        if (Intrin::AtomicExchange(&thread.isLocked, false) == true)
+        if (Intrin::AtomicExchange(&thread.isLocked, false) == false)
             CheckNoEntry();
 
         if (usrFiberHandle)
@@ -151,7 +151,7 @@ void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userDa
 
         thread.usrFiberHandle = usrFiberHandle;
 
-        if (Intrin::AtomicExchange(&thread.isLocked, false) == true)
+        if (Intrin::AtomicExchange(&thread.isLocked, false) == false)
             CheckNoEntry();
 
         break;
