@@ -19,7 +19,8 @@ namespace
     {
         volatile uintptr_t isLocked{};
         volatile uintptr_t handle{};
-        volatile uintptr_t fiberHandle{};
+        volatile uintptr_t sysFiberHandle{};
+        volatile uintptr_t usrFiberHandle{};
     };
 
     struct System final
@@ -48,25 +49,36 @@ static uint32_t __stdcall ThreadAction(void *const threadIndex)
 {
     auto& thread = GSystem->threads[(size_t)threadIndex];
 
-    thread.fiberHandle = (uintptr_t)WinApi::ConvertThreadToFiber(nullptr);
-    if (!thread.fiberHandle)
+    thread.sysFiberHandle = (uintptr_t)WinApi::ConvertThreadToFiber(nullptr);
+    if (!thread.sysFiberHandle)
         CheckNoEntry();
 
     if (!Intrin::AtomicExchange(&thread.isLocked, false))
         CheckNoEntry();
 
-    while (!Intrin::AtomicCompareExchange(&GSystem->exitFlag, false, false))
+    while (Intrin::AtomicCompareExchange(&GSystem->exitFlag, false, false) == false)
     {
-        Console::Print(" da ");
-        Intrin::YieldProcessor();
+        while (Intrin::AtomicCompareExchange(&thread.isLocked, false, true) == true)
+            Intrin::YieldProcessor();
+
+        auto const usrFiberHandle = thread.usrFiberHandle;
+        thread.usrFiberHandle = {};
+
+        if (Intrin::AtomicExchange(&thread.isLocked, false) == true)
+            CheckNoEntry();
+
+        if (usrFiberHandle)
+            WinApi::SwitchToFiber((void*)usrFiberHandle);
+        else
+            Intrin::YieldProcessor();
     }
 
-    if (Intrin::AtomicExchange(&thread.isLocked, true))
+    if (Intrin::AtomicExchange(&thread.isLocked, true) == true)
         CheckNoEntry();
 
     if (!WinApi::ConvertFiberToThread())
         CheckNoEntry();
-    thread.fiberHandle = {};
+    thread.sysFiberHandle = {};
 
     return {};
 }
@@ -121,9 +133,29 @@ void Coroutines::ShutSystem()
 }
 
 
-void Coroutines::Spawn(CoroutineAction_t, uintptr_t const)
+void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userData)
 {
-    CheckNoEntry();
+    auto const usrFiberHandle = (uintptr_t)WinApi::CreateFiber(16384, (void*)coroutineAction, (void*)userData);
+    if (!usrFiberHandle)
+        CheckNoEntry();
+
+    auto i = size_t{};
+
+    while (true)
+    {
+        auto& thread = GSystem->threads[i];
+        i = (i + 1) % GSystem->threads.GetSize();
+
+        if (Intrin::AtomicCompareExchange(&thread.isLocked, false, true) == true)
+            continue;
+
+        thread.usrFiberHandle = usrFiberHandle;
+
+        if (Intrin::AtomicExchange(&thread.isLocked, false) == true)
+            CheckNoEntry();
+
+        break;
+    }
 }
 
 
