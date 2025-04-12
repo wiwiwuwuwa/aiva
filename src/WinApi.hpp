@@ -8,6 +8,7 @@ extern "C" { namespace Aiva::WinApi
     constexpr auto STD_OUTPUT_HANDLE = (uint32_t)(-11);
     constexpr auto STD_ERROR_HANDLE = (uint32_t)(-12);
     constexpr auto INFINITE = (uint32_t)(-1);
+    constexpr auto TLS_OUT_OF_INDEXES = (uint32_t)(-1);
     constexpr auto WAIT_FAILED = (uint32_t)(-1);
 
 
@@ -46,6 +47,10 @@ extern "C" { namespace Aiva::WinApi
     int __stdcall HeapDestroy(void *const hHeap);
     int __stdcall HeapFree(void *const hHeap, uint32_t const dwFlags, void *const lpMem);
     void __stdcall SwitchToFiber(void *const lpFiber);
+    uint32_t __stdcall TlsAlloc();
+    int __stdcall TlsFree(uint32_t const dwTlsIndex);
+    void* __stdcall TlsGetValue(uint32_t const dwTlsIndex);
+    int __stdcall TlsSetValue(uint32_t const dwTlsIndex, void *const lpTlsValue);
     uint32_t __stdcall WaitForSingleObject(void *const hHandle, uint32_t const dwMilliseconds);
     int __stdcall WriteFile(void *const hFile, void const*const lpBuffer, uint32_t const nNumberOfBytesToWrite, uint32_t *const lpNumberOfBytesWritten, void *const lpOverlapped);
 }}

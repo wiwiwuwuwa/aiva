@@ -17,16 +17,15 @@ namespace
 {
     struct Thread final
     {
-        volatile uintptr_t isLocked{};
-        volatile uintptr_t handle{};
+        volatile uintptr_t threadHandle{};
         volatile uintptr_t sysFiberHandle{};
-        volatile uintptr_t usrFiberHandle{};
     };
 
     struct System final
     {
-        volatile uintptr_t exitFlag{};
+        uint32_t tlsHandle{ WinApi::TLS_OUT_OF_INDEXES };
         Span<Thread> threads{};
+        volatile uintptr_t exitFlag{};
     };
 }
 // namespace
@@ -49,38 +48,92 @@ static uint32_t __stdcall ThreadAction(void *const threadIndex)
 {
     auto& thread = GSystem->threads[(size_t)threadIndex];
 
+    if (!WinApi::TlsSetValue(GSystem->tlsHandle, threadIndex))
+        CheckNoEntry();
+
     thread.sysFiberHandle = (uintptr_t)WinApi::ConvertThreadToFiber(nullptr);
     if (!thread.sysFiberHandle)
         CheckNoEntry();
 
-    if (!Intrin::AtomicExchange(&thread.isLocked, false))
-        CheckNoEntry();
-
     while (Intrin::AtomicCompareExchange(&GSystem->exitFlag, false, false) == false)
     {
-        while (Intrin::AtomicCompareExchange(&thread.isLocked, false, true) == true)
-            Intrin::YieldProcessor();
-
-        auto const usrFiberHandle = thread.usrFiberHandle;
-        thread.usrFiberHandle = {};
-
-        if (Intrin::AtomicExchange(&thread.isLocked, false) == false)
-            CheckNoEntry();
-
-        if (usrFiberHandle)
-            WinApi::SwitchToFiber((void*)usrFiberHandle);
-        else
-            Intrin::YieldProcessor();
+        Intrin::YieldProcessor();
     }
-
-    if (Intrin::AtomicExchange(&thread.isLocked, true) == true)
-        CheckNoEntry();
 
     if (!WinApi::ConvertFiberToThread())
         CheckNoEntry();
     thread.sysFiberHandle = {};
 
+    if (!WinApi::TlsSetValue(GSystem->tlsHandle, nullptr))
+        CheckNoEntry();
+
     return {};
+}
+
+
+static void InitTlsHandle()
+{
+    GSystem->tlsHandle = WinApi::TlsAlloc();
+    if (GSystem->tlsHandle == WinApi::TLS_OUT_OF_INDEXES)
+        CheckNoEntry();
+}
+
+
+static void InitThreads()
+{
+    GSystem->threads = Memory::GetHeapAlloc().CreateArray<Thread>(GetNumberOfCores());
+    if (!GSystem->threads)
+        CheckNoEntry();
+
+    for (auto i = size_t{}; i < GSystem->threads.GetSize(); i++)
+    {
+        auto& thread = GSystem->threads[i];
+
+        thread.threadHandle = (uintptr_t)WinApi::CreateThread({}, 16384, ThreadAction, (void*)i, {}, {});
+        if (!thread.threadHandle)
+            CheckNoEntry();
+    }
+}
+
+
+static void InitExitFlag()
+{
+    if (Intrin::AtomicExchange(&GSystem->exitFlag, false) == true)
+        CheckNoEntry();
+}
+
+
+static void ShutExitFlag()
+{
+    if (Intrin::AtomicExchange(&GSystem->exitFlag, true) == true)
+        CheckNoEntry();
+}
+
+
+static void ShutThreads()
+{
+    for (auto i = GSystem->threads.GetSize(); i > 0; i--)
+    {
+        auto& thread = GSystem->threads[i - 1];
+
+        if (WinApi::WaitForSingleObject((void*)thread.threadHandle, WinApi::INFINITE) == WinApi::WAIT_FAILED)
+            CheckNoEntry();
+
+        thread.threadHandle = {};
+    }
+
+    GSystem->threads = Memory::GetHeapAlloc().DeleteArray(GSystem->threads);
+    if (GSystem->threads)
+        CheckNoEntry();
+}
+
+
+static void ShutTlsHandle()
+{
+    if (!WinApi::TlsFree(GSystem->tlsHandle))
+        CheckNoEntry();
+
+    GSystem->tlsHandle = WinApi::TLS_OUT_OF_INDEXES;
 }
 
 
@@ -92,18 +145,9 @@ void Coroutines::InitSystem()
     GSystemObject.Construct();
     GSystem = &GSystemObject.GetObject();
 
-    GSystem->threads = Memory::GetHeapAlloc().CreateArray<Thread>(GetNumberOfCores());
-
-    for (auto i = size_t{}; i < GSystem->threads.GetSize(); i++)
-    {
-        auto& thread = GSystem->threads[i];
-
-        thread.isLocked = true;
-        thread.handle = (uintptr_t)WinApi::CreateThread({}, 16384, ThreadAction, (void*)i, {}, {});
-
-        if (!thread.handle)
-            CheckNoEntry();
-    }
+    InitTlsHandle();
+    InitThreads();
+    InitExitFlag();
 }
 
 
@@ -112,50 +156,18 @@ void Coroutines::ShutSystem()
     if (!GSystem)
         CheckNoEntry();
 
-    if (Intrin::AtomicExchange(&GSystem->exitFlag, true))
-        CheckNoEntry();
-
-    for (auto i = GSystem->threads.GetSize(); i > 0; i--)
-    {
-        auto& thread = GSystem->threads[i - 1];
-
-        if (WinApi::WaitForSingleObject((void*)thread.handle, WinApi::INFINITE) == WinApi::WAIT_FAILED)
-            CheckNoEntry();
-
-        thread.handle = {};
-        thread.isLocked = false;
-    }
-
-    GSystem->threads = Memory::GetHeapAlloc().DeleteArray(GSystem->threads);
+    ShutExitFlag();
+    ShutThreads();
+    ShutTlsHandle();
 
     GSystem = nullptr;
     GSystemObject.Destruct();
 }
 
 
-void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userData)
+void Coroutines::Spawn(CoroutineAction_t, uintptr_t const)
 {
-    auto const usrFiberHandle = (uintptr_t)WinApi::CreateFiber(16384, (void*)coroutineAction, (void*)userData);
-    if (!usrFiberHandle)
-        CheckNoEntry();
-
-    auto i = size_t{};
-
-    while (true)
-    {
-        auto& thread = GSystem->threads[i];
-        i = (i + 1) % GSystem->threads.GetSize();
-
-        if (Intrin::AtomicCompareExchange(&thread.isLocked, false, true) == true)
-            continue;
-
-        thread.usrFiberHandle = usrFiberHandle;
-
-        if (Intrin::AtomicExchange(&thread.isLocked, false) == false)
-            CheckNoEntry();
-
-        break;
-    }
+    CheckNoEntry();
 }
 
 
