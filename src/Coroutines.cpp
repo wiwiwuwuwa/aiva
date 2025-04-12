@@ -15,20 +15,17 @@ using namespace Aiva::Coroutines;
 
 namespace
 {
-    enum class UserFiberResult : uintptr_t
+    enum class ExitFlag : uintptr_t
     {
-        kYield,
-        kClose,
+        kNone,
+        kExit,
     };
 
 
     struct ThreadContext final
     {
         volatile uintptr_t threadHandle{};
-        volatile uintptr_t threadFiberHandle{};
-        volatile uintptr_t currUserFiberHandle{};
-        volatile uintptr_t currUserFiberResult{};
-        volatile uintptr_t nextUserFiberHandle{};
+        volatile uintptr_t fiberHandle{};
     };
 
 
@@ -36,6 +33,7 @@ namespace
     {
         uint32_t tlsHandle{ WinApi::TLS_OUT_OF_INDEXES };
         Span<ThreadContext> threadContexts{};
+
         volatile uintptr_t exitFlag{};
     };
 }
@@ -48,7 +46,7 @@ static System* GSystem{};
 
 static size_t GetNumberOfCores()
 {
-    WinApi::SYSTEM_INFO systemInfo{};
+    auto systemInfo = WinApi::SYSTEM_INFO{};
     WinApi::GetSystemInfo(&systemInfo);
 
     return (size_t)systemInfo.dwNumberOfProcessors;
@@ -62,54 +60,21 @@ static uint32_t __stdcall ThreadAction(void *const threadIndex)
     if (!WinApi::TlsSetValue(GSystem->tlsHandle, (void*)((size_t)threadIndex + 1)))
         CheckNoEntry();
 
-    auto const threadFiberHandle = (uintptr_t)WinApi::ConvertThreadToFiber(nullptr);
-    if (!threadFiberHandle)
+    auto const fiberHandle = (uintptr_t)WinApi::ConvertThreadToFiber(nullptr);
+    if (!fiberHandle)
         CheckNoEntry();
 
-    Intrin::AtomicExchange(&threadContext.threadFiberHandle, threadFiberHandle);
+    Intrin::AtomicExchange(&threadContext.fiberHandle, fiberHandle);
 
-    while (Intrin::AtomicCompareExchange(&GSystem->exitFlag, false, false) == false)
-    {
-        auto const nextUserFiberHandle = Intrin::AtomicExchange(&threadContext.nextUserFiberHandle, {});
-        auto const currUserFiberHandle = Intrin::AtomicExchange(&threadContext.currUserFiberHandle, nextUserFiberHandle);
+    while (Intrin::AtomicCompareExchange(&GSystem->exitFlag, {}, {}) != (uintptr_t)ExitFlag::kExit)
+        Intrin::YieldProcessor();
 
-        if (!currUserFiberHandle)
-            continue;
-
-        WinApi::SwitchToFiber((void*)currUserFiberHandle);
-        auto const currUserFiberResult = (UserFiberResult)Intrin::AtomicCompareExchange(&threadContext.currUserFiberResult, {}, {});
-
-        if (currUserFiberResult == UserFiberResult::kClose)
-        {
-            WinApi::DeleteFiber((void*)currUserFiberHandle);
-            continue;
-        }
-
-        if (currUserFiberResult == UserFiberResult::kYield)
-        {
-            auto i = ((size_t)threadIndex + 1) % GSystem->threadContexts.GetSize();
-
-            while (true)
-            {
-                auto& nextThreadContext = GSystem->threadContexts[i];
-                i = (i + 1) % GSystem->threadContexts.GetSize();
-
-                if (Intrin::AtomicCompareExchange(&nextThreadContext.nextUserFiberHandle, {}, currUserFiberHandle) == uintptr_t{})
-                    break;
-            }
-
-            continue;
-        }
-
-        CheckNoEntry();
-    }
-
-    Intrin::AtomicExchange(&threadContext.threadFiberHandle, {});
+    Intrin::AtomicExchange(&threadContext.fiberHandle, {});
 
     if (!WinApi::ConvertFiberToThread())
         CheckNoEntry();
 
-    if (!WinApi::TlsSetValue(GSystem->tlsHandle, nullptr))
+    if (!WinApi::TlsSetValue(GSystem->tlsHandle, {}))
         CheckNoEntry();
 
     return {};
@@ -140,7 +105,7 @@ static void InitThreadContexts()
     }
 
     for (auto i = size_t{}; i < GSystem->threadContexts.GetSize(); i++)
-        while (Intrin::AtomicCompareExchange(&GSystem->threadContexts[i].threadFiberHandle, {}, {}) == uintptr_t{})
+        while (Intrin::AtomicCompareExchange(&GSystem->threadContexts[i].fiberHandle, {}, {}) == uintptr_t{})
             Intrin::YieldProcessor();
 }
 
@@ -214,65 +179,19 @@ void Coroutines::ShutSystem()
 }
 
 
-void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userData)
+void Coroutines::Spawn(CoroutineAction_t, uintptr_t const)
 {
-    if (!GSystem)
-        CheckNoEntry();
-
-    auto const userFiberHandle = (uintptr_t)WinApi::CreateFiber(16384, (void*)coroutineAction, (void*)userData);
-    if (!userFiberHandle)
-        CheckNoEntry();
-
-    auto i = size_t{};
-
-    while (true)
-    {
-        auto& threadContext = GSystem->threadContexts[i];
-        i = (i + 1) % GSystem->threadContexts.GetSize();
-
-        if (Intrin::AtomicCompareExchange(&threadContext.nextUserFiberHandle, {}, userFiberHandle) == uintptr_t{})
-            break;
-
-        Intrin::YieldProcessor();
-    }
+    CheckNoEntry();
 }
 
 
 void Coroutines::Yield()
 {
-    if (!GSystem)
-        CheckNoEntry();
-
-    auto const threadIndex = (size_t)WinApi::TlsGetValue(GSystem->tlsHandle) - 1;
-    if (threadIndex == (size_t)(-1))
-        CheckNoEntry();
-
-    auto& threadContext = GSystem->threadContexts[threadIndex];
-
-    auto const threadFiberHandle = Intrin::AtomicCompareExchange(&threadContext.threadFiberHandle, {}, {});
-    if (!threadFiberHandle)
-        CheckNoEntry();
-
-    Intrin::AtomicExchange(&threadContext.currUserFiberResult, (uintptr_t)UserFiberResult::kYield);
-    WinApi::SwitchToFiber((void*)threadFiberHandle);
+    CheckNoEntry();
 }
 
 
 void Coroutines::Close()
 {
-    if (!GSystem)
-        CheckNoEntry();
-
-    auto const threadIndex = (size_t)WinApi::TlsGetValue(GSystem->tlsHandle) - 1;
-    if (threadIndex == (size_t)(-1))
-        CheckNoEntry();
-
-    auto& threadContext = GSystem->threadContexts[threadIndex];
-
-    auto const threadFiberHandle = Intrin::AtomicCompareExchange(&threadContext.threadFiberHandle, {}, {});
-    if (!threadFiberHandle)
-        CheckNoEntry();
-
-    Intrin::AtomicExchange(&threadContext.currUserFiberResult, (uintptr_t)UserFiberResult::kClose);
-    WinApi::SwitchToFiber((void*)threadFiberHandle);
+    CheckNoEntry();
 }
