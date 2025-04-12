@@ -1,16 +1,14 @@
 #pragma once
+#include "Numbers.hpp"
 
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Weverything"
-#include <intrin.h>
-#pragma clang diagnostic pop
+namespace Aiva::Intrin
+{
+    uintptr_t AtomicCompareExchange(volatile uintptr_t *const Destination, uintptr_t const Comperand, uintptr_t const Exchange);
+    uintptr_t AtomicExchange(volatile uintptr_t *const Destination, uintptr_t const Exchange);
+    void YieldProcessor();
+}
+// namespace Aiva::Intrin
 
 
-#ifdef __INTELLISENSE__
-    extern "C" long __stdcall InterlockedCompareExchange(volatile long *const Destination, long const Exchange, long const Comperand);
-    extern "C" long __stdcall InterlockedExchange(volatile long *const Destination, long const Exchange);
-#else
-    #define InterlockedCompareExchange _InterlockedCompareExchange
-    #define InterlockedExchange _InterlockedExchange
-#endif // __INTELLISENSE__
+#include "Intrin.inl"

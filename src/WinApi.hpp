@@ -34,6 +34,9 @@ extern "C" { namespace Aiva::WinApi
     };
 
 
+    void* __stdcall ConvertThreadToFiber(void *const lpParameter);
+    int __stdcall ConvertFiberToThread();
+    void* __stdcall CreateFiber(size_t const dwStackSize, void *const lpStartAddress, void *const lpParameter);
     void* __stdcall CreateThread(void *const lpThreadAttributes, size_t const dwStackSize, uint32_t (__stdcall *lpStartAddress)(void*), void *const lpParameter, uint32_t const dwCreationFlags, uint32_t *const lpThreadId);
     [[noreturn]] void __stdcall ExitProcess(uint32_t const uExitCode);
     void* __stdcall GetStdHandle(uint32_t const nStdHandle);
@@ -42,7 +45,8 @@ extern "C" { namespace Aiva::WinApi
     void* __stdcall HeapCreate(uint32_t const flOptions, size_t const dwInitialSize, size_t const dwMaximumSize);
     int __stdcall HeapDestroy(void *const hHeap);
     int __stdcall HeapFree(void *const hHeap, uint32_t const dwFlags, void *const lpMem);
-    uint32_t __stdcall WaitForMultipleObjects(uint32_t const nCount, void const*const*const lpHandles, int const bWaitAll, uint32_t const dwMilliseconds);
+    void __stdcall SwitchToFiber(void *const lpFiber);
+    uint32_t __stdcall WaitForSingleObject(void *const hHandle, uint32_t const dwMilliseconds);
     int __stdcall WriteFile(void *const hFile, void const*const lpBuffer, uint32_t const nNumberOfBytesToWrite, uint32_t *const lpNumberOfBytesWritten, void *const lpOverlapped);
 }}
 // extern "C" { namespace Aiva

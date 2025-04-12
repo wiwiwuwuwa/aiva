@@ -10,7 +10,8 @@ namespace Aiva::Coroutines
     void InitSystem();
     void ShutSystem();
 
-    void Start(CoroutineAction_t coroutineAction, uintptr_t const userData);
+    void Spawn(CoroutineAction_t coroutineAction, uintptr_t const userData = {});
     void Yield();
+    void Close();
 }
 // namespace Aiva::Coroutines
