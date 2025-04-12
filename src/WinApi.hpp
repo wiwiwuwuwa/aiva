@@ -39,6 +39,7 @@ extern "C" { namespace Aiva::WinApi
     int __stdcall ConvertFiberToThread();
     void* __stdcall CreateFiber(size_t const dwStackSize, void *const lpStartAddress, void *const lpParameter);
     void* __stdcall CreateThread(void *const lpThreadAttributes, size_t const dwStackSize, uint32_t (__stdcall *lpStartAddress)(void*), void *const lpParameter, uint32_t const dwCreationFlags, uint32_t *const lpThreadId);
+    void DeleteFiber(void *const lpFiber);
     [[noreturn]] void __stdcall ExitProcess(uint32_t const uExitCode);
     void* __stdcall GetStdHandle(uint32_t const nStdHandle);
     void __stdcall GetSystemInfo(SYSTEM_INFO* const lpSystemInfo);

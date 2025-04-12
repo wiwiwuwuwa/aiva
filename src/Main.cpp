@@ -6,22 +6,22 @@
 
 void CoroutineA(Aiva::uintptr_t const)
 {
-    Aiva::Console::PrintLine(" da ");
+    Aiva::Console::Print(" da ");
     Aiva::Coroutines::Yield();
-    Aiva::Console::PrintLine(" da ");
+    Aiva::Console::Print(" da ");
     Aiva::Coroutines::Yield();
-    Aiva::Console::PrintLine(" da ");
+    Aiva::Console::Print(" da ");
     Aiva::Coroutines::Close();
 }
 
 
 void CoroutineB(Aiva::uintptr_t const)
 {
-    Aiva::Console::PrintLine(" ne ");
+    Aiva::Console::Print(" ne ");
     Aiva::Coroutines::Yield();
-    Aiva::Console::PrintLine(" ne ");
+    Aiva::Console::Print(" ne ");
     Aiva::Coroutines::Yield();
-    Aiva::Console::PrintLine(" ne ");
+    Aiva::Console::Print(" ne ");
     Aiva::Coroutines::Close();
 }
 

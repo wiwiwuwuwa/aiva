@@ -19,6 +19,8 @@ namespace
     {
         volatile uintptr_t threadHandle{};
         volatile uintptr_t sysFiberHandle{};
+        volatile uintptr_t usrFiberHandle{};
+        volatile uintptr_t delFiberHandle{};
     };
 
     struct System final
@@ -48,21 +50,34 @@ static uint32_t __stdcall ThreadAction(void *const threadIndex)
 {
     auto& thread = GSystem->threads[(size_t)threadIndex];
 
-    if (!WinApi::TlsSetValue(GSystem->tlsHandle, threadIndex))
+    if (!WinApi::TlsSetValue(GSystem->tlsHandle, (void*)((size_t)threadIndex + 1)))
         CheckNoEntry();
 
-    thread.sysFiberHandle = (uintptr_t)WinApi::ConvertThreadToFiber(nullptr);
-    if (!thread.sysFiberHandle)
+    auto const sysFiberHandle = (uintptr_t)WinApi::ConvertThreadToFiber(nullptr);
+    if (!sysFiberHandle)
+        CheckNoEntry();
+
+    if (Intrin::AtomicCompareExchange(&thread.sysFiberHandle, {}, sysFiberHandle) != uintptr_t{})
         CheckNoEntry();
 
     while (Intrin::AtomicCompareExchange(&GSystem->exitFlag, false, false) == false)
     {
+        auto const usrFiberHandle = Intrin::AtomicCompareExchange(&thread.usrFiberHandle, {}, {});
+        if (usrFiberHandle)
+            WinApi::SwitchToFiber((void*)usrFiberHandle);
+
+        auto const delFiberHandle = Intrin::AtomicCompareExchange(&thread.delFiberHandle, {}, {});
+        if (delFiberHandle)
+            WinApi::DeleteFiber((void*)delFiberHandle);
+
         Intrin::YieldProcessor();
     }
 
+    if (Intrin::AtomicExchange(&thread.sysFiberHandle, {}) == uintptr_t{})
+        CheckNoEntry();
+
     if (!WinApi::ConvertFiberToThread())
         CheckNoEntry();
-    thread.sysFiberHandle = {};
 
     if (!WinApi::TlsSetValue(GSystem->tlsHandle, nullptr))
         CheckNoEntry();
@@ -165,19 +180,90 @@ void Coroutines::ShutSystem()
 }
 
 
-void Coroutines::Spawn(CoroutineAction_t, uintptr_t const)
+void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userData)
 {
-    CheckNoEntry();
+    if (!GSystem)
+        CheckNoEntry();
+
+    auto const usrFiberHandle = (uintptr_t)WinApi::CreateFiber(16384, (void*)coroutineAction, (void*)userData);
+    if (!usrFiberHandle)
+        CheckNoEntry();
+
+    auto i = size_t{};
+
+    while (true)
+    {
+        auto& thread = GSystem->threads[i];
+        i = (i + 1) % GSystem->threads.GetSize();
+
+        if (Intrin::AtomicCompareExchange(&thread.sysFiberHandle, {}, {}) == uintptr_t{})
+            continue;
+
+        if (Intrin::AtomicCompareExchange(&thread.usrFiberHandle, {}, usrFiberHandle) == uintptr_t{})
+            break;
+
+        Intrin::YieldProcessor();
+    }
 }
 
 
 void Coroutines::Yield()
 {
-    CheckNoEntry();
+    if (!GSystem)
+        CheckNoEntry();
+
+    auto const threadIndex = (size_t)WinApi::TlsGetValue(GSystem->tlsHandle) - 1;
+    if (threadIndex == (size_t)(-1))
+        CheckNoEntry();
+
+    auto& worker = GSystem->threads[threadIndex];
+
+    auto const usrFiberHandle = Intrin::AtomicExchange(&worker.usrFiberHandle, {});
+    if (!usrFiberHandle)
+        CheckNoEntry();
+
+    auto i = (threadIndex + 1) % GSystem->threads.GetSize();
+
+    while (true)
+    {
+        auto& thread = GSystem->threads[i];
+        i = (i + 1) % GSystem->threads.GetSize();
+
+        if (Intrin::AtomicCompareExchange(&thread.usrFiberHandle, {}, usrFiberHandle) == uintptr_t{})
+            break;
+
+        Intrin::YieldProcessor();
+    }
+
+    auto const sysFiberHandle = Intrin::AtomicCompareExchange(&worker.sysFiberHandle, {}, {});
+    if (!sysFiberHandle)
+        CheckNoEntry();
+
+    WinApi::SwitchToFiber((void*)sysFiberHandle);
 }
 
 
 void Coroutines::Close()
 {
-    CheckNoEntry();
+    if (!GSystem)
+        CheckNoEntry();
+
+    auto const threadIndex = (size_t)WinApi::TlsGetValue(GSystem->tlsHandle) - 1;
+    if (threadIndex == (size_t)(-1))
+        CheckNoEntry();
+
+    auto& worker = GSystem->threads[threadIndex];
+
+    auto const usrFiberHandle = Intrin::AtomicExchange(&worker.usrFiberHandle, {});
+    if (!usrFiberHandle)
+        CheckNoEntry();
+
+    if (Intrin::AtomicExchange(&worker.delFiberHandle, usrFiberHandle) != uintptr_t{})
+        CheckNoEntry();
+
+    auto const sysFiberHandle = Intrin::AtomicCompareExchange(&worker.sysFiberHandle, {}, {});
+    if (!sysFiberHandle)
+        CheckNoEntry();
+
+    WinApi::SwitchToFiber((void*)sysFiberHandle);
 }
