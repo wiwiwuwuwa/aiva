@@ -12,6 +12,6 @@ namespace Aiva::Coroutines
 
     void Spawn(CoroutineAction_t coroutineAction, uintptr_t const userData = {});
     void Yield();
-    void Close();
+    [[noreturn]] void Close();
 }
 // namespace Aiva::Coroutines

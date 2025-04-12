@@ -8,6 +8,6 @@
     Aiva::Console::Error(__FILE__); \
     Aiva::Console::Error(": "); \
     Aiva::Console::Error(__func__); \
-    Aiva::Console::Error(": no entry check failed.\n"); \
+    Aiva::Console::Error(": entry check failed.\n"); \
     Aiva::Process::ExitFailure(); \
 } \

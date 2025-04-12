@@ -4,6 +4,7 @@
 #include "AllocatorBase.hpp"
 #include "Ensures.hpp"
 #include "Memory.hpp"
+#include "Templates.hpp"
 
 
 namespace Aiva
@@ -72,7 +73,7 @@ namespace Aiva
         if (!m_head)
             CheckNoEntry();
 
-        auto const data = m_head->m_data;
+        auto const data = Templates::Move(m_head->m_data);
 
         if (m_head == m_tail)
         {

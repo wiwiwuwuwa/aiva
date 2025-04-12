@@ -47,7 +47,7 @@ extern "C" { namespace Aiva::WinApi
     void* __stdcall HeapCreate(uint32_t const flOptions, size_t const dwInitialSize, size_t const dwMaximumSize);
     int __stdcall HeapDestroy(void *const hHeap);
     int __stdcall HeapFree(void *const hHeap, uint32_t const dwFlags, void *const lpMem);
-    void __stdcall SwitchToFiber(void *const lpFiber);
+    [[noreturn]] void __stdcall SwitchToFiber(void *const lpFiber);
     uint32_t __stdcall TlsAlloc();
     int __stdcall TlsFree(uint32_t const dwTlsIndex);
     void* __stdcall TlsGetValue(uint32_t const dwTlsIndex);

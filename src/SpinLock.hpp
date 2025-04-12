@@ -1,4 +1,6 @@
 #pragma once
+#include "LockScope.hpp"
+#include "Numbers.hpp"
 
 
 namespace Aiva
@@ -18,7 +20,10 @@ namespace Aiva
         void Unlock();
 
     private:
-        volatile bool m_locked{};
+        volatile uintptr_t m_locked{};
     };
+
+
+    using SpinLockScope_t = LockScope<SpinLock>;
 };
 // namespace Aiva

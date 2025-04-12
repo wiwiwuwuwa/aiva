@@ -4,11 +4,9 @@
 
 namespace Aiva::Intrin
 {
-    template <typename TType>
-    inline TType AtomicCompareExchange(volatile TType *const Destination, TType const Comperand, TType const Exchange);
+    inline uintptr_t AtomicCompareExchange(volatile uintptr_t *const Destination, uintptr_t const Comperand, uintptr_t const Exchange);
 
-    template <typename TType>
-    inline TType AtomicExchange(volatile TType *const Destination, TType const Exchange);
+    inline uintptr_t AtomicExchange(volatile uintptr_t *const Destination, uintptr_t const Exchange);
 
     inline void YieldProcessor();
 }

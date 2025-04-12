@@ -1,38 +1,26 @@
 #pragma once
 #include "Intrin.hpp"
 
-#include "Templates.hpp"
-
 
 namespace Aiva::Intrin
 {
-    template <typename TType>
-    inline TType AtomicCompareExchange(volatile TType *const Destination, TType const Comperand, TType const Exchange)
+    inline uintptr_t AtomicCompareExchange(volatile uintptr_t *const Destination, uintptr_t const Comperand, uintptr_t const Exchange)
     {
-        using namespace Aiva::Templates;
-        using NumberIdentity_t = NumberIdentity_t<NumberType::Int, NumberSign::None, GetNumberSize<TType>()>;
+        auto comperand = Comperand;
+        auto exchange = Exchange;
+        __atomic_compare_exchange(Destination, &comperand, &exchange, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 
-        auto volatile *const destination = (volatile NumberIdentity_t*)(volatile void*)Destination;
-        auto comperand = *(NumberIdentity_t*)(void*)&Comperand;
-        auto exchange = *(NumberIdentity_t*)(void*)&Exchange;
-        __atomic_compare_exchange(destination, &comperand, &exchange, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
-
-        return *(TType*)(void*)&comperand;
+        return comperand;
     }
 
 
-    template <typename TType>
-    inline TType AtomicExchange(volatile TType *const Destination, TType const Exchange)
+    inline uintptr_t AtomicExchange(volatile uintptr_t *const Destination, uintptr_t const Exchange)
     {
-        using namespace Aiva::Templates;
-        using NumberIdentity_t = NumberIdentity_t<NumberType::Int, NumberSign::None, GetNumberSize<TType>()>;
+        auto exchange = Exchange;
+        auto previous = uintptr_t{};
+        __atomic_exchange(Destination, &exchange, &previous, __ATOMIC_SEQ_CST);
 
-        auto volatile *const destination = (volatile NumberIdentity_t*)(volatile void*)Destination;
-        auto exchange = *(NumberIdentity_t*)(void*)&Exchange;
-        auto previous = NumberIdentity_t{};
-        __atomic_exchange(destination, &exchange, &previous, __ATOMIC_SEQ_CST);
-
-        return *(TType*)(void*)&previous;
+        return previous;
     }
 
 
