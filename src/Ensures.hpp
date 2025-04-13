@@ -1,13 +1,19 @@
 #pragma once
 #include "Console.hpp"
+#include "CstrView.hpp"
 #include "Process.hpp"
 
 
 #define CheckNoEntry() \
 { \
-    Aiva::Console::Error(__FILE__); \
-    Aiva::Console::Error(": "); \
-    Aiva::Console::Error(__func__); \
-    Aiva::Console::Error(": entry check failed.\n"); \
+    Aiva::CstrView const messages[] = \
+    { \
+        __FILE__, \
+        ": ", \
+        __func__, \
+        ": NO_ENTRY_POINT." \
+    }; \
+ \
+    Aiva::Console::ErrorLine(messages); \
     Aiva::Process::ExitFailure(); \
 } \

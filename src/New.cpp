@@ -11,7 +11,7 @@ using namespace Aiva::Memory;
 void* operator new(size_t const size)
 {
     auto const spanOfBytes = GetHeapAlloc().Alloc(size);
-    return &spanOfBytes.GetData();
+    return spanOfBytes.GetDataPtr();
 }
 
 

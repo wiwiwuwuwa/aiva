@@ -9,14 +9,20 @@ namespace Aiva
     {
     public:
         constexpr Span();
-        constexpr Span(size_t const size, TType& data);
         constexpr Span(TType& data);
         constexpr Span(nullptr_t const);
 
         constexpr operator bool() const;
         constexpr TType& operator[](size_t const index) const;
-        constexpr TType& GetData() const;
         constexpr size_t GetSize() const;
+        constexpr TType* GetDataPtr() const;
+
+        Span(size_t const size, TType& data);
+        TType& GetDataRef() const;
+
+    public:
+        template <size_t TSize>
+        constexpr Span(TType (&data)[TSize]);
 
     private:
         size_t m_size;

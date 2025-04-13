@@ -25,7 +25,7 @@ namespace
         HeapAllocator& operator=(HeapAllocator&&) = delete;
 
         Span<byte_t> Alloc(size_t const size) const override;
-        nullptr_t Free(Span<byte_t> span) const override;
+        nullptr_t Free(Span<byte_t> const span) const override;
 
     public:
         void* m_heap;
@@ -64,9 +64,9 @@ Span<byte_t> HeapAllocator::Alloc(size_t const size) const
 }
 
 
-nullptr_t HeapAllocator::Free(Span<byte_t> span) const
+nullptr_t HeapAllocator::Free(Span<byte_t> const span) const
 {
-    if (!WinApi::HeapFree(m_heap, {}, &span.GetData()))
+    if (!WinApi::HeapFree(m_heap, {}, span.GetDataPtr()))
         CheckNoEntry();
 
     return {};
