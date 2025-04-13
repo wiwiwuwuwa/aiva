@@ -1,27 +1,84 @@
 #include "Coroutines.hpp"
 
 #include "Ensures.hpp"
+#include "ManageObject.hpp"
+#include "NonCopyable.hpp"
+#include "Queue.hpp"
+#include "SpinLock.hpp"
+#include "WinApi.hpp"
 
 
 using namespace Aiva;
 using namespace Aiva::Coroutines;
 
 
+namespace
+{
+    class SystemContext final : public NonCopyable
+    {
+    public:
+        SystemContext() = default;
+        ~SystemContext() = default;
+
+        void EnqueueUserFiber(void *const handle);
+        bool HasAnyUserFiber() const;
+        void* DequeueUserFiber();
+
+    private:
+        SpinLock m_userFibersLock;
+        Queue<void*> m_userFibers;
+    };
+}
+// namespace
+
+
+void SystemContext::EnqueueUserFiber(void *const handle)
+{
+    SpinLockScope_t const lockScope{ m_userFibersLock };
+    m_userFibers.Enqueue(handle);
+}
+
+
+bool SystemContext::HasAnyUserFiber() const
+{
+    SpinLockScope_t const lockScope{ const_cast<SpinLock&>(m_userFibersLock) };
+    return !m_userFibers.IsEmpty();
+}
+
+
+void* SystemContext::DequeueUserFiber()
+{
+    SpinLockScope_t const lockScope{ m_userFibersLock };
+    return m_userFibers.Dequeue();
+}
+
+
+static SpinLock GSystemContextLock{};
+static ManageObject<SystemContext> GSystemContext{};
+
+
 void Coroutines::InitSystem()
 {
-    CheckNoEntry();
+    SpinLockScope_t const lockScope{ GSystemContextLock };
+    GSystemContext.Construct();
 }
 
 
 void Coroutines::ShutSystem()
 {
-    CheckNoEntry();
+    SpinLockScope_t const lockScope{ GSystemContextLock };
+    GSystemContext.Destruct();
 }
 
 
-void Coroutines::Spawn(CoroutineAction_t, uintptr_t const)
+void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userData)
 {
-    CheckNoEntry();
+    auto const fiberHandle = WinApi::CreateFiber(16384, (void*)coroutineAction, (void*)userData);
+    if (!fiberHandle)
+        CheckNoEntry();
+
+    SpinLockScope_t const lockScope{ GSystemContextLock };
+    GSystemContext->EnqueueUserFiber(fiberHandle);
 }
 
 
