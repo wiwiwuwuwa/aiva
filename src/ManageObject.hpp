@@ -16,6 +16,8 @@ namespace Aiva
         constexpr TType const& GetObject() const;
 
         constexpr operator bool() const;
+        constexpr TType& operator*();
+        constexpr TType const& operator*() const;
         constexpr TType* operator->();
         constexpr TType const* operator->() const;
 

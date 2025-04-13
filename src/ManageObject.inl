@@ -58,6 +58,26 @@ namespace Aiva
 
 
     template <typename TType>
+    constexpr TType& ManageObject<TType>::operator*()
+    {
+        if (!m_ptr)
+            CheckNoEntry();
+
+        return *m_ptr;
+    }
+
+
+    template <typename TType>
+    constexpr TType const& ManageObject<TType>::operator*() const
+    {
+        if (!m_ptr)
+            CheckNoEntry();
+
+        return *m_ptr;
+    }
+
+
+    template <typename TType>
     constexpr TType* ManageObject<TType>::operator->()
     {
         if (!m_ptr)

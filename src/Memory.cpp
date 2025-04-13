@@ -19,28 +19,23 @@ namespace
         HeapAllocator();
         ~HeapAllocator() override;
 
+        HeapAllocator(HeapAllocator const&) = delete;
+        HeapAllocator& operator=(HeapAllocator const&) = delete;
+        HeapAllocator(HeapAllocator&&) = delete;
+        HeapAllocator& operator=(HeapAllocator&&) = delete;
+
         Span<byte_t> Alloc(size_t const size) const override;
         nullptr_t Free(Span<byte_t> span) const override;
 
     public:
-        void* m_heap{};
-    };
-
-    class System final
-    {
-    public:
-        HeapAllocator& GetHeapAlloc();
-        HeapAllocator const& GetHeapAlloc() const;
-
-    private:
-        HeapAllocator m_heapAlloc{};
+        void* m_heap;
     };
 }
 // namespace
 
 
-static SpinLock GSystemLock{};
-static ManageObject<System> GSystem{};
+static SpinLock GHeapAllocLock{};
+static ManageObject<HeapAllocator> GHeapAlloc{};
 
 
 HeapAllocator::HeapAllocator()
@@ -78,34 +73,22 @@ nullptr_t HeapAllocator::Free(Span<byte_t> span) const
 }
 
 
-HeapAllocator& System::GetHeapAlloc()
-{
-    return m_heapAlloc;
-}
-
-
-HeapAllocator const& System::GetHeapAlloc() const
-{
-    return m_heapAlloc;
-}
-
-
 void Memory::InitSystem()
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem.Construct();
+    SpinLockScope_t const lockScope{ GHeapAllocLock };
+    GHeapAlloc.Construct();
 }
 
 
 void Memory::ShutSystem()
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem.Destruct();
+    SpinLockScope_t const lockScope{ GHeapAllocLock };
+    GHeapAlloc.Destruct();
 }
 
 
 AllocatorBase const& Memory::GetHeapAlloc()
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    return GSystem->GetHeapAlloc();
+    SpinLockScope_t const lockScope{ GHeapAllocLock };
+    return *GHeapAlloc;
 }

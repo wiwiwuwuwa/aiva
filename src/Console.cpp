@@ -12,27 +12,33 @@ using namespace Aiva::Console;
 
 namespace
 {
-    class System final
+    class Printer final
     {
     public:
-        System();
+        Printer();
+        ~Printer() = default;
+
+        Printer(Printer const&) = delete;
+        Printer& operator=(Printer const&) = delete;
+        Printer(Printer&&) = delete;
+        Printer& operator=(Printer&&) = delete;
 
         void Print(CstrView const message) const;
         void Error(CstrView const message) const;
 
     private:
-        void* m_printHandle{};
-        void* m_errorHandle{};
+        void* m_printHandle;
+        void* m_errorHandle;
     };
 }
 // namespace
 
 
-static SpinLock GSystemLock{};
-static ManageObject<System> GSystem{};
+static SpinLock GPrinterLock{};
+static ManageObject<Printer> GPrinter{};
 
 
-System::System()
+Printer::Printer()
 {
     m_printHandle = WinApi::GetStdHandle(WinApi::STD_OUTPUT_HANDLE);
     if (!m_printHandle)
@@ -44,17 +50,19 @@ System::System()
 }
 
 
-void System::Print(CstrView const message) const
+void Printer::Print(CstrView const message) const
 {
     auto written = uint32_t{};
+
     if (!WinApi::WriteFile(m_printHandle, message, StrLen(message), &written, nullptr))
         Process::ExitFailure();
 }
 
 
-void System::Error(CstrView const message) const
+void Printer::Error(CstrView const message) const
 {
     auto written = uint32_t{};
+
     if (!WinApi::WriteFile(m_errorHandle, message, StrLen(message), &written, nullptr))
         Process::ExitFailure();
 }
@@ -62,47 +70,47 @@ void System::Error(CstrView const message) const
 
 void Console::InitSystem()
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem.Construct();
+    SpinLockScope_t const lockScope{ GPrinterLock };
+    GPrinter.Construct();
 }
 
 
 void Console::ShutSystem()
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem.Destruct();
+    SpinLockScope_t const lockScope{ GPrinterLock };
+    GPrinter.Destruct();
 }
 
 
 void Console::Print(CstrView const message)
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem->Print(message);
+    SpinLockScope_t const lockScope{ GPrinterLock };
+    GPrinter->Print(message);
 }
 
 
 void Console::PrintLine(CstrView const message)
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem->Print(message);
-    GSystem->Print("\n");
+    SpinLockScope_t const lockScope{ GPrinterLock };
+    GPrinter->Print(message);
+    GPrinter->Print("\n");
 }
 
 
 void Console::Error(CstrView const message)
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem->Error("\033[31m");
-    GSystem->Error(message);
-    GSystem->Error("\033[0m");
+    SpinLockScope_t const lockScope{ GPrinterLock };
+    GPrinter->Error("\033[31m");
+    GPrinter->Error(message);
+    GPrinter->Error("\033[0m");
 }
 
 
 void Console::ErrorLine(CstrView const message)
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem->Error("\033[31m");
-    GSystem->Error(message);
-    GSystem->Error("\033[0m");
-    GSystem->Error("\n");
+    SpinLockScope_t const lockScope{ GPrinterLock };
+    GPrinter->Error("\033[31m");
+    GPrinter->Error(message);
+    GPrinter->Error("\033[0m");
+    GPrinter->Error("\n");
 }
