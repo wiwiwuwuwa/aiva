@@ -1,6 +1,7 @@
 #include "Console.hpp"
 
 #include "ManageObject.hpp"
+#include "NonCopyable.hpp"
 #include "Process.hpp"
 #include "SpinLock.hpp"
 #include "WinApi.hpp"
@@ -12,16 +13,11 @@ using namespace Aiva::Console;
 
 namespace
 {
-    class Printer final
+    class Printer final : public NonCopyable
     {
     public:
         Printer();
         ~Printer() = default;
-
-        Printer(Printer const&) = delete;
-        Printer& operator=(Printer const&) = delete;
-        Printer(Printer&&) = delete;
-        Printer& operator=(Printer&&) = delete;
 
         void Print(CstrView const message) const;
         void Error(CstrView const message) const;
@@ -71,6 +67,7 @@ void Printer::Error(CstrView const message) const
 void Console::InitSystem()
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
+
     GPrinter.Construct();
 }
 
@@ -78,6 +75,7 @@ void Console::InitSystem()
 void Console::ShutSystem()
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
+
     GPrinter.Destruct();
 }
 
@@ -85,6 +83,7 @@ void Console::ShutSystem()
 void Console::Print(CstrView const message)
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
+
     GPrinter->Print(message);
 }
 
@@ -92,6 +91,7 @@ void Console::Print(CstrView const message)
 void Console::PrintLine(CstrView const message)
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
+
     GPrinter->Print(message);
     GPrinter->Print("\n");
 }
@@ -120,6 +120,7 @@ void Console::PrintLine(Span<const CstrView> const messages)
 void Console::Error(CstrView const message)
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
+
     GPrinter->Error("\033[31m");
     GPrinter->Error(message);
     GPrinter->Error("\033[0m");
@@ -129,6 +130,7 @@ void Console::Error(CstrView const message)
 void Console::ErrorLine(CstrView const message)
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
+
     GPrinter->Error("\033[31m");
     GPrinter->Error(message);
     GPrinter->Error("\033[0m");

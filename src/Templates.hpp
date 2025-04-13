@@ -110,6 +110,7 @@ namespace Aiva::Templates
     template <NumberType TType, NumberSign TSign, NumberSize TSize>
     struct NumberIdentity final : public TypeIdentity<decltype(CreateNumber<TType, TSign, TSize>())> {};
 
+
     template <NumberType TType, NumberSign TSign, NumberSize TSize>
     using NumberIdentity_t = typename NumberIdentity<TType, TSign, TSize>::Type_t;
 }

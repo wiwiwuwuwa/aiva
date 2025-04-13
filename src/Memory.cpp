@@ -1,7 +1,9 @@
 #include "Memory.hpp"
+
 #include "Allocators.hpp"
 #include "Ensures.hpp"
 #include "ManageObject.hpp"
+#include "NonCopyable.hpp"
 #include "Span.hpp"
 #include "SpinLock.hpp"
 #include "WinApi.hpp"
@@ -13,16 +15,11 @@ using namespace Aiva::Memory;
 
 namespace
 {
-    class HeapAllocator final : public AllocatorBase
+    class HeapAllocator final : public NonCopyable, public AllocatorBase
     {
     public:
         HeapAllocator();
         ~HeapAllocator() override;
-
-        HeapAllocator(HeapAllocator const&) = delete;
-        HeapAllocator& operator=(HeapAllocator const&) = delete;
-        HeapAllocator(HeapAllocator&&) = delete;
-        HeapAllocator& operator=(HeapAllocator&&) = delete;
 
         Span<byte_t> Alloc(size_t const size) const override;
         nullptr_t Free(Span<byte_t> const span) const override;

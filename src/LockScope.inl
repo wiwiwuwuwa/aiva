@@ -5,7 +5,7 @@
 namespace Aiva
 {
     template <typename TType>
-    LockScope<TType>::LockScope(TType& lock) : m_lock{ lock }
+    LockScope<TType>::LockScope(TType const& lock) : m_lock{ const_cast<TType&>(lock) }
     {
         m_lock.Lock();
     }

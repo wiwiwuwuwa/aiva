@@ -1,19 +1,15 @@
 #pragma once
+#include "NonCopyable.hpp"
 
 
 namespace Aiva
 {
     template <typename TType>
-    class LockScope
+    class LockScope : public NonCopyable
     {
     public:
-        LockScope(TType& lock);
+        LockScope(TType const& lock);
         ~LockScope();
-
-        LockScope(const LockScope&) = delete;
-        LockScope& operator=(const LockScope&) = delete;
-        LockScope(LockScope&&) = delete;
-        LockScope& operator=(LockScope&&) = delete;
 
     private:
         TType& m_lock;

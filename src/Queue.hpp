@@ -1,19 +1,15 @@
 #pragma once
+#include "NonCopyable.hpp"
 
 
 namespace Aiva
 {
     template <typename TType>
-    class Queue final
+    class Queue final : public NonCopyable
     {
     public:
         Queue() = default;
         ~Queue();
-
-        Queue(const Queue&) = delete;
-        Queue& operator=(const Queue&) = delete;
-        Queue(Queue&&) = delete;
-        Queue& operator=(Queue&&) = delete;
 
         bool IsEmpty() const;
         void PushBack(TType const& data);
