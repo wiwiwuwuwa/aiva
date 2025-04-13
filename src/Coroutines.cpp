@@ -15,6 +15,30 @@ using namespace Aiva::Coroutines;
 
 namespace
 {
+    class SharedData final : public NonCopyable
+    {
+    public:
+        static void InitInstance();
+        static void ShutInstance();
+
+        static uint32_t GetTlsHandle();
+        static void EnqueueUserFiber(void *const handle);
+        static void* DequeueUserFiber();
+
+    private:
+        SharedData();
+        ~SharedData();
+
+        static SpinLock GInstanceLock;
+        static ManageObject<SharedData> GInstance;
+
+        uint32_t m_tlsHandle{};
+        Queue<void*> m_userFibers;
+
+        friend ManageObject<SharedData>;
+    };
+
+
     class Thread final : public NonCopyable
     {
     public:
@@ -25,7 +49,6 @@ namespace
         static uint32_t __stdcall ThreadAction(void *const userData);
         void ThreadAction();
 
-        SpinLock m_lock;
         SpinLock m_threadLock;
         void* m_threadHandle;
         volatile uintptr_t m_threadStop;
@@ -35,33 +58,91 @@ namespace
     class System final : public NonCopyable
     {
     public:
-        System();
-        ~System();
-
-        void EnqueueUserFiber(void *const handle);
-        void* DequeueUserFiber();
+        static void InitInstance();
+        static void ShutInstance();
 
     private:
-        SpinLock m_lock;
-        ManageObject<Thread> m_thread;
-        Queue<void*> m_userFibers;
+        System() = default;
+        ~System() = default;
+
+        static SpinLock GInstanceLock;
+        static ManageObject<System> GInstance;
+
+        Thread m_thread;
+
+        friend ManageObject<System>;
     };
 }
 // namespace
 
 
-static SpinLock GSystemLock{};
-static ManageObject<System> GSystem{};
+SpinLock SharedData::GInstanceLock;
+ManageObject<SharedData> SharedData::GInstance;
+SpinLock System::GInstanceLock;
+ManageObject<System> System::GInstance;
+
+
+void SharedData::InitInstance()
+{
+    SpinLockScope_t const lockScope{ GInstanceLock };
+    GInstance.Construct();
+}
+
+
+void SharedData::ShutInstance()
+{
+    SpinLockScope_t const lockScope{ GInstanceLock };
+    GInstance.Destruct();
+}
+
+
+uint32_t SharedData::GetTlsHandle()
+{
+    SpinLockScope_t const lockScope{ GInstanceLock };
+    return GInstance->m_tlsHandle;
+}
+
+
+void SharedData::EnqueueUserFiber(void *const handle)
+{
+    SpinLockScope_t const lockScope{ GInstanceLock };
+    GInstance->m_userFibers.Enqueue(handle);
+}
+
+
+void* SharedData::DequeueUserFiber()
+{
+    SpinLockScope_t const lockScope{ GInstanceLock };
+
+    if (!GInstance->m_userFibers.IsEmpty())
+        return GInstance->m_userFibers.Dequeue();
+
+    return {};
+}
+
+
+SharedData::SharedData()
+{
+    m_tlsHandle = WinApi::TlsAlloc();
+    if (m_tlsHandle == WinApi::TLS_OUT_OF_INDEXES)
+        CheckNoEntry();
+}
+
+
+SharedData::~SharedData()
+{
+    if (!WinApi::TlsFree(m_tlsHandle))
+        CheckNoEntry();
+    m_tlsHandle = WinApi::TLS_OUT_OF_INDEXES;
+}
 
 
 Thread::Thread()
 {
-    SpinLockScope_t const lockScope{ m_lock };
     Intrin::AtomicExchange(&m_threadStop, 0);
-
     m_threadLock.Lock();
-    m_threadHandle = WinApi::CreateThread({}, 16384, ThreadAction, this, {}, {});
 
+    m_threadHandle = WinApi::CreateThread({}, 16384, ThreadAction, this, {}, {});
     if (!m_threadHandle)
         CheckNoEntry();
 }
@@ -69,9 +150,7 @@ Thread::Thread()
 
 Thread::~Thread()
 {
-    SpinLockScope_t const lockScope{ m_lock };
     Intrin::AtomicExchange(&m_threadStop, 1);
-
     m_threadLock.Lock();
 }
 
@@ -87,61 +166,49 @@ uint32_t __stdcall Thread::ThreadAction(void *const userData)
 
 void Thread::ThreadAction()
 {
+    if (!WinApi::TlsSetValue(SharedData::GetTlsHandle(), this))
+        CheckNoEntry();
+
     while (Intrin::AtomicCompareExchange(&m_threadStop, 0, 0) == 0)
     {
-        if (GSystem->DequeueUserFiber())
+        if (SharedData::DequeueUserFiber())
             Console::PrintLine("fiber");
 
         Intrin::YieldProcessor();
     }
 
+    if (!WinApi::TlsSetValue(SharedData::GetTlsHandle(), {}))
+        CheckNoEntry();
+
     m_threadLock.Unlock();
 }
 
 
-System::System()
+void System::InitInstance()
 {
-    SpinLockScope_t const lockScope{ m_lock };
-    m_thread.Construct();
+    SpinLockScope_t const lockScope{ GInstanceLock };
+    GInstance.Construct();
 }
 
 
-System::~System()
+void System::ShutInstance()
 {
-    SpinLockScope_t const lockScope{ m_lock };
-    m_thread.Destruct();
-}
-
-
-void System::EnqueueUserFiber(void *const handle)
-{
-    SpinLockScope_t const lockScope{ m_lock };
-    m_userFibers.Enqueue(handle);
-}
-
-
-void* System::DequeueUserFiber()
-{
-    SpinLockScope_t const lockScope{ m_lock };
-
-    if (!m_userFibers.IsEmpty())
-        return m_userFibers.Dequeue();
-    else
-        return {};
+    SpinLockScope_t const lockScope{ GInstanceLock };
+    GInstance.Destruct();
 }
 
 
 void Coroutines::InitSystem()
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem.Construct();
+    SharedData::InitInstance();
+    System::InitInstance();
 }
 
 
 void Coroutines::ShutSystem()
 {
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem.Destruct();
+    System::ShutInstance();
+    SharedData::ShutInstance();
 }
 
 
@@ -151,8 +218,7 @@ void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userDa
     if (!fiberHandle)
         CheckNoEntry();
 
-    SpinLockScope_t const lockScope{ GSystemLock };
-    GSystem->EnqueueUserFiber(fiberHandle);
+    SharedData::EnqueueUserFiber(fiberHandle);
 }
 
 
