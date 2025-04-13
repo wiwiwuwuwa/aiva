@@ -1,12 +1,12 @@
 #include "Coroutines.hpp"
 
-#include "AllocatorBase.hpp"
+#include "Allocators.hpp"
 #include "Ensures.hpp"
 #include "Intrin.hpp"
 #include "LockScope.hpp"
+#include "ManageObject.hpp"
 #include "Memory.hpp"
 #include "Queue.hpp"
-#include "RawObject.hpp"
 #include "Span.hpp"
 #include "SpinLock.hpp"
 #include "WinApi.hpp"
@@ -48,7 +48,7 @@ namespace
 // namespace
 
 
-static RawObject<System> GSystemObject{};
+static ManageObject<System> GSystemObject{};
 static System* GSystem{};
 
 

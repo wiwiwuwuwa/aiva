@@ -1,8 +1,9 @@
 #include "Memory.hpp"
-#include "AllocatorBase.hpp"
+#include "Allocators.hpp"
 #include "Ensures.hpp"
-#include "RawObject.hpp"
+#include "ManageObject.hpp"
 #include "Span.hpp"
+#include "SpinLock.hpp"
 #include "WinApi.hpp"
 
 
@@ -21,20 +22,25 @@ namespace
         Span<byte_t> Alloc(size_t const size) const override;
         nullptr_t Free(Span<byte_t> span) const override;
 
-    private:
+    public:
         void* m_heap{};
     };
 
-    struct System final
+    class System final
     {
+    public:
+        HeapAllocator& GetHeapAlloc();
+        HeapAllocator const& GetHeapAlloc() const;
+
+    private:
         HeapAllocator m_heapAlloc{};
     };
 }
 // namespace
 
 
-static RawObject<System> GSystemObject{};
-static System* GSystem{};
+static SpinLock GSystemLock{};
+static ManageObject<System> GSystem{};
 
 
 HeapAllocator::HeapAllocator()
@@ -49,6 +55,7 @@ HeapAllocator::~HeapAllocator()
 {
     if (!WinApi::HeapDestroy(m_heap))
         CheckNoEntry();
+    m_heap = {};
 }
 
 
@@ -67,34 +74,38 @@ nullptr_t HeapAllocator::Free(Span<byte_t> span) const
     if (!WinApi::HeapFree(m_heap, {}, &span.GetData()))
         CheckNoEntry();
 
-    return nullptr;
+    return {};
+}
+
+
+HeapAllocator& System::GetHeapAlloc()
+{
+    return m_heapAlloc;
+}
+
+
+HeapAllocator const& System::GetHeapAlloc() const
+{
+    return m_heapAlloc;
 }
 
 
 void Memory::InitSystem()
 {
-    if (GSystem)
-        CheckNoEntry();
-
-    GSystemObject.Construct();
-    GSystem = &GSystemObject.GetObject();
+    SpinLockScope_t const lockScope{ GSystemLock };
+    GSystem.Construct();
 }
 
 
 void Memory::ShutSystem()
 {
-    if (!GSystem)
-        CheckNoEntry();
-
-    GSystem = nullptr;
-    GSystemObject.Destruct();
+    SpinLockScope_t const lockScope{ GSystemLock };
+    GSystem.Destruct();
 }
 
 
 AllocatorBase const& Memory::GetHeapAlloc()
 {
-    if (!GSystem)
-        CheckNoEntry();
-
-    return GSystem->m_heapAlloc;
+    SpinLockScope_t const lockScope{ GSystemLock };
+    return GSystem->GetHeapAlloc();
 }

@@ -5,7 +5,7 @@
 namespace Aiva
 {
     template <typename TType>
-    class RawObject final
+    class ManageObject final
     {
     public:
         template <typename... TArgs>
@@ -15,11 +15,16 @@ namespace Aiva
         constexpr TType& GetObject();
         constexpr TType const& GetObject() const;
 
+        constexpr operator bool() const;
+        constexpr TType* operator->();
+        constexpr TType const* operator->() const;
+
     private:
         alignas(alignof(TType)) byte_t m_object[sizeof(TType)];
+        TType* m_ptr{};
     };
 }
 // namespace Aiva
 
 
-#include "RawObject.inl"
+#include "ManageObject.inl"
