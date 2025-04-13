@@ -25,8 +25,8 @@ namespace
         static uint32_t __stdcall ThreadAction(void *const userData);
         void ThreadAction();
 
-        SpinLock m_mainLock;
-        SpinLock m_initLock;
+        SpinLock m_lock;
+        SpinLock m_threadLock;
         void* m_threadHandle;
         volatile uintptr_t m_threadStop;
     };
@@ -57,12 +57,12 @@ static ManageObject<System> GSystem{};
 
 Thread::Thread()
 {
-    SpinLockScope_t const lockScope{ m_mainLock };
-
+    SpinLockScope_t const lockScope{ m_lock };
     Intrin::AtomicExchange(&m_threadStop, 0);
-    m_initLock.Lock();
 
+    m_threadLock.Lock();
     m_threadHandle = WinApi::CreateThread({}, 16384, ThreadAction, this, {}, {});
+
     if (!m_threadHandle)
         CheckNoEntry();
 }
@@ -70,10 +70,10 @@ Thread::Thread()
 
 Thread::~Thread()
 {
-    SpinLockScope_t const lockScope{ m_mainLock };
-
+    SpinLockScope_t const lockScope{ m_lock };
     Intrin::AtomicExchange(&m_threadStop, 1);
-    m_initLock.Unlock();
+
+    m_threadLock.Lock();
 }
 
 
@@ -88,14 +88,12 @@ uint32_t __stdcall Thread::ThreadAction(void *const userData)
 
 void Thread::ThreadAction()
 {
-    m_initLock.Unlock();
-
     while (Intrin::AtomicCompareExchange(&m_threadStop, 0, 0) == 0)
     {
         Intrin::YieldProcessor();
     }
 
-    m_initLock.Lock();
+    m_threadLock.Unlock();
 }
 
 
