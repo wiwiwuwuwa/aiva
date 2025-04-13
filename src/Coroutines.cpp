@@ -39,7 +39,6 @@ namespace
         ~System();
 
         void EnqueueUserFiber(void *const handle);
-        bool HasAnyUserFiber() const;
         void* DequeueUserFiber();
 
     private:
@@ -90,6 +89,9 @@ void Thread::ThreadAction()
 {
     while (Intrin::AtomicCompareExchange(&m_threadStop, 0, 0) == 0)
     {
+        if (GSystem->DequeueUserFiber())
+            Console::PrintLine("fiber");
+
         Intrin::YieldProcessor();
     }
 
@@ -118,17 +120,14 @@ void System::EnqueueUserFiber(void *const handle)
 }
 
 
-bool System::HasAnyUserFiber() const
-{
-    SpinLockScope_t const lockScope{ m_lock };
-    return !m_userFibers.IsEmpty();
-}
-
-
 void* System::DequeueUserFiber()
 {
     SpinLockScope_t const lockScope{ m_lock };
-    return m_userFibers.Dequeue();
+
+    if (!m_userFibers.IsEmpty())
+        return m_userFibers.Dequeue();
+    else
+        return {};
 }
 
 
