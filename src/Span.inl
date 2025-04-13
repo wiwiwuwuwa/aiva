@@ -1,6 +1,11 @@
 #pragma once
+
 #include "Span.hpp"
+
+#include "Console.hpp"
+#include "CstrView.hpp"
 #include "Ensures.hpp"
+#include "Process.hpp"
 
 
 namespace Aiva
@@ -95,11 +100,11 @@ namespace Aiva
         if (bytesCount % sizeof(TDst))
             return {};
 
-        auto const dataAddr = reinterpret_cast<uintptr_t>(&span.GetData());
+        auto const dataAddr = reinterpret_cast<uintptr_t>(span.GetDataPtr());
         if (dataAddr % alignof(TDst))
             return {};
 
-        auto& data = reinterpret_cast<TDst&>(span.GetData());
+        auto& data = reinterpret_cast<TDst&>(span.GetDataRef());
         auto const size = bytesCount / sizeof(TDst);
 
         return Span<TDst>{ size, data };

@@ -1,5 +1,7 @@
 #pragma once
+
 #include "Allocators.hpp"
+
 #include "Ensures.hpp"
 #include "New.hpp"
 #include "Templates.hpp"
@@ -13,7 +15,7 @@ namespace Aiva
         auto const spanOfBytes = Alloc(sizeof(TType));
         auto const spanOfObject = CastSpan<TType>(spanOfBytes);
 
-        auto& object = spanOfObject.GetData();
+        auto& object = spanOfObject.GetDataRef();
         new (&object) TType{ Templates::Forward<TArgs>(args)... };
 
         return object;

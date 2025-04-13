@@ -1,7 +1,10 @@
 #include "ManageObject.hpp"
 
+#include "Console.hpp"
+#include "CstrView.hpp"
 #include "Ensures.hpp"
 #include "New.hpp"
+#include "Process.hpp"
 #include "Templates.hpp"
 
 

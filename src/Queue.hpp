@@ -1,4 +1,5 @@
 #pragma once
+
 #include "NonCopyable.hpp"
 
 
@@ -12,9 +13,9 @@ namespace Aiva
         ~Queue();
 
         bool IsEmpty() const;
-        void PushBack(TType const& data);
-        void PushBack(TType&& data);
-        TType PopFront();
+        void Enqueue(TType const& data);
+        void Enqueue(TType&& data);
+        TType Dequeue();
 
     private:
         struct Node final

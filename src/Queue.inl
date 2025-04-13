@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Queue.hpp"
 
 #include "Allocators.hpp"
@@ -32,7 +33,7 @@ namespace Aiva
 
 
     template <typename TType>
-    void Queue<TType>::PushBack(TType const& data)
+    void Queue<TType>::Enqueue(TType const& data)
     {
         auto const node = &Memory::GetHeapAlloc().Create<Node>(data);
 
@@ -50,7 +51,7 @@ namespace Aiva
 
 
     template <typename TType>
-    void Queue<TType>::PushBack(TType&& data)
+    void Queue<TType>::Enqueue(TType&& data)
     {
         auto const node = &Memory::GetHeapAlloc().Create<Node>(Templates::Move(data));
 
@@ -68,7 +69,7 @@ namespace Aiva
 
 
     template <typename TType>
-    TType Queue<TType>::PopFront()
+    TType Queue<TType>::Dequeue()
     {
         if (!m_head)
             CheckNoEntry();

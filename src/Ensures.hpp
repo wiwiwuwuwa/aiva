@@ -1,7 +1,4 @@
 #pragma once
-#include "Console.hpp"
-#include "CstrView.hpp"
-#include "Process.hpp"
 
 
 #define CheckNoEntry() \

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Numbers.hpp"
 
 extern "C" { namespace Aiva::WinApi
