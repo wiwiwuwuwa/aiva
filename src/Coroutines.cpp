@@ -1,6 +1,7 @@
 #include "Coroutines.hpp"
 
 #include "Ensures.hpp"
+#include "Intrin.hpp"
 #include "ManageObject.hpp"
 #include "NonCopyable.hpp"
 #include "Queue.hpp"
@@ -14,60 +15,144 @@ using namespace Aiva::Coroutines;
 
 namespace
 {
-    class SystemContext final : public NonCopyable
+    class Thread final : public NonCopyable
     {
     public:
-        SystemContext() = default;
-        ~SystemContext() = default;
+        Thread();
+        ~Thread();
+
+    private:
+        static uint32_t __stdcall ThreadAction(void *const userData);
+        void ThreadAction();
+
+        SpinLock m_lock;
+        void* m_threadHandle;
+        volatile uintptr_t m_stop;
+    };
+
+
+    class System final : public NonCopyable
+    {
+    public:
+        System();
+        ~System();
 
         void EnqueueUserFiber(void *const handle);
         bool HasAnyUserFiber() const;
         void* DequeueUserFiber();
 
     private:
-        SpinLock m_userFibersLock;
+        SpinLock m_lock;
+        ManageObject<Thread> m_thread;
         Queue<void*> m_userFibers;
     };
 }
 // namespace
 
 
-void SystemContext::EnqueueUserFiber(void *const handle)
+static SpinLock GSystemLock{};
+static ManageObject<System> GSystem{};
+
+
+Thread::Thread()
 {
-    SpinLockScope_t const lockScope{ m_userFibersLock };
+    m_lock.Lock();
+    Intrin::AtomicExchange(&m_stop, false);
+
+    m_threadHandle = WinApi::CreateThread({}, 16384, ThreadAction, this, {}, {});
+    if (!m_threadHandle)
+        CheckNoEntry();
+}
+
+
+Thread::~Thread()
+{
+    m_lock.Lock();
+    Intrin::AtomicExchange(&m_stop, true);
+
+    if (!WinApi::WaitForSingleObject(m_threadHandle, WinApi::INFINITE))
+        CheckNoEntry();
+    m_threadHandle = {};
+
+    Intrin::AtomicExchange(&m_stop, false);
+    m_lock.Unlock();
+}
+
+
+uint32_t __stdcall Thread::ThreadAction(void *const userData)
+{
+    auto const self = (Thread*)userData;
+    self->ThreadAction();
+
+    return {};
+}
+
+
+void Thread::ThreadAction()
+{
+    m_lock.Unlock();
+
+    while (Intrin::AtomicCompareExchange(&m_stop, false, false) == false)
+    {
+        GSystemLock.Lock();
+        if (GSystem->HasAnyUserFiber())
+        {
+            Console::PrintLine("ThreadAction: HasAnyUserFiber()");
+            GSystem->DequeueUserFiber();
+        }
+        GSystemLock.Unlock();
+
+        Intrin::YieldProcessor();
+    }
+}
+
+
+System::System()
+{
+    SpinLockScope_t const lockScope{ m_lock };
+    m_thread.Construct();
+}
+
+
+System::~System()
+{
+    SpinLockScope_t const lockScope{ m_lock };
+    m_thread.Destruct();
+}
+
+
+void System::EnqueueUserFiber(void *const handle)
+{
+    SpinLockScope_t const lockScope{ m_lock };
     m_userFibers.Enqueue(handle);
 }
 
 
-bool SystemContext::HasAnyUserFiber() const
+bool System::HasAnyUserFiber() const
 {
-    SpinLockScope_t const lockScope{ const_cast<SpinLock&>(m_userFibersLock) };
+    SpinLockScope_t const lockScope{ m_lock };
     return !m_userFibers.IsEmpty();
 }
 
 
-void* SystemContext::DequeueUserFiber()
+void* System::DequeueUserFiber()
 {
-    SpinLockScope_t const lockScope{ m_userFibersLock };
+    SpinLockScope_t const lockScope{ m_lock };
     return m_userFibers.Dequeue();
 }
 
 
-static SpinLock GSystemContextLock{};
-static ManageObject<SystemContext> GSystemContext{};
-
-
 void Coroutines::InitSystem()
 {
-    SpinLockScope_t const lockScope{ GSystemContextLock };
-    GSystemContext.Construct();
+    SpinLockScope_t const lockScope{ GSystemLock };
+    GSystem.Construct();
 }
 
 
 void Coroutines::ShutSystem()
 {
-    SpinLockScope_t const lockScope{ GSystemContextLock };
-    GSystemContext.Destruct();
+    SpinLockScope_t const lockScope{ GSystemLock };
+    GSystem.Destruct();
 }
 
 
@@ -77,8 +162,8 @@ void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userDa
     if (!fiberHandle)
         CheckNoEntry();
 
-    SpinLockScope_t const lockScope{ GSystemContextLock };
-    GSystemContext->EnqueueUserFiber(fiberHandle);
+    SpinLockScope_t const lockScope{ GSystemLock };
+    GSystem->EnqueueUserFiber(fiberHandle);
 }
 
 
@@ -121,7 +206,7 @@ void Coroutines::Yield()
 //     };
 
 
-//     struct ThreadContext final
+//     struct Thread final
 //     {
 //         volatile uintptr_t thread{};
 //         volatile uintptr_t fiber{};
@@ -133,7 +218,7 @@ void Coroutines::Yield()
 //     struct System final
 //     {
 //         uint32_t tlsHandle{ WinApi::TLS_OUT_OF_INDEXES };
-//         Span<ThreadContext> contexts{};
+//         Span<Thread> contexts{};
 
 //         volatile uintptr_t exitFlag{};
 
@@ -219,9 +304,9 @@ void Coroutines::Yield()
 // }
 
 
-// static void InitThreadContexts()
+// static void InitThreads()
 // {
-//     GSystem->contexts = Memory::GetHeapAlloc().CreateArray<ThreadContext>(GetNumberOfCores());
+//     GSystem->contexts = Memory::GetHeapAlloc().CreateArray<Thread>(GetNumberOfCores());
 //     if (!GSystem->contexts)
 //         CheckNoEntry();
 
@@ -244,7 +329,7 @@ void Coroutines::Yield()
 // }
 
 
-// static void ShutThreadContexts()
+// static void ShutThreads()
 // {
 //     for (auto i = GSystem->contexts.GetSize(); i > 0; i--)
 //     {
@@ -281,7 +366,7 @@ void Coroutines::Yield()
 
 //     Intrin::AtomicExchange(&GSystem->exitFlag, uintptr_t{ 0 });
 //     InitTlsHandle();
-//     InitThreadContexts();
+//     InitThreads();
 // }
 
 
@@ -291,7 +376,7 @@ void Coroutines::Yield()
 //         CheckNoEntry();
 
 //     Intrin::AtomicExchange(&GSystem->exitFlag, uintptr_t{ 1 });
-//     ShutThreadContexts();
+//     ShutThreads();
 //     ShutTlsHandle();
 
 //     GSystem = nullptr;

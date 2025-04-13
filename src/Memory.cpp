@@ -24,7 +24,7 @@ namespace
         Span<byte_t> Alloc(size_t const size) const override;
         nullptr_t Free(Span<byte_t> const span) const override;
 
-    public:
+    private:
         void* m_heap;
     };
 }
