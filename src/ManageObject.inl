@@ -29,7 +29,7 @@ namespace Aiva
             CheckNoEntry();
 
         m_ptr = {};
-        GetObject().~TType();
+        reinterpret_cast<TType*>(m_object)->~TType();
     }
 
 

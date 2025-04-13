@@ -46,7 +46,6 @@ void Main()
 
     Aiva::Console::PrintLine("Hello World!");
     Coroutines();
-    while (true) {};
 
     Aiva::Coroutines::ShutSystem();
     Aiva::Memory::ShutSystem();

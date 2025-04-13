@@ -10,7 +10,7 @@ void SpinLock::Lock()
 {
     while (true)
     {
-        if (Intrin::AtomicCompareExchange(&m_locked, uintptr_t{ 0 }, uintptr_t{ 1 }) == uintptr_t{ 0 })
+        if (Intrin::AtomicCompareExchange(&m_locked, 0, 1) == 0)
             break;
 
         Intrin::YieldProcessor();
@@ -22,7 +22,7 @@ void SpinLock::Unlock()
 {
     while (true)
     {
-        if (Intrin::AtomicCompareExchange(&m_locked, uintptr_t{ 1 }, uintptr_t{ 0 }) == uintptr_t{ 1 })
+        if (Intrin::AtomicCompareExchange(&m_locked, 1, 0) == 1)
             break;
 
         Intrin::YieldProcessor();

@@ -25,9 +25,10 @@ namespace
         static uint32_t __stdcall ThreadAction(void *const userData);
         void ThreadAction();
 
-        SpinLock m_lock;
+        SpinLock m_mainLock;
+        SpinLock m_initLock;
         void* m_threadHandle;
-        volatile uintptr_t m_stop;
+        volatile uintptr_t m_threadStop;
     };
 
 
@@ -56,8 +57,10 @@ static ManageObject<System> GSystem{};
 
 Thread::Thread()
 {
-    m_lock.Lock();
-    Intrin::AtomicExchange(&m_stop, false);
+    SpinLockScope_t const lockScope{ m_mainLock };
+
+    Intrin::AtomicExchange(&m_threadStop, 0);
+    m_initLock.Lock();
 
     m_threadHandle = WinApi::CreateThread({}, 16384, ThreadAction, this, {}, {});
     if (!m_threadHandle)
@@ -67,15 +70,10 @@ Thread::Thread()
 
 Thread::~Thread()
 {
-    m_lock.Lock();
-    Intrin::AtomicExchange(&m_stop, true);
+    SpinLockScope_t const lockScope{ m_mainLock };
 
-    if (!WinApi::WaitForSingleObject(m_threadHandle, WinApi::INFINITE))
-        CheckNoEntry();
-    m_threadHandle = {};
-
-    Intrin::AtomicExchange(&m_stop, false);
-    m_lock.Unlock();
+    Intrin::AtomicExchange(&m_threadStop, 1);
+    m_initLock.Unlock();
 }
 
 
@@ -90,20 +88,14 @@ uint32_t __stdcall Thread::ThreadAction(void *const userData)
 
 void Thread::ThreadAction()
 {
-    m_lock.Unlock();
+    m_initLock.Unlock();
 
-    while (Intrin::AtomicCompareExchange(&m_stop, false, false) == false)
+    while (Intrin::AtomicCompareExchange(&m_threadStop, 0, 0) == 0)
     {
-        GSystemLock.Lock();
-        if (GSystem->HasAnyUserFiber())
-        {
-            Console::PrintLine("ThreadAction: HasAnyUserFiber()");
-            GSystem->DequeueUserFiber();
-        }
-        GSystemLock.Unlock();
-
         Intrin::YieldProcessor();
     }
+
+    m_initLock.Lock();
 }
 
 
