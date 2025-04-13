@@ -1,3 +1,6 @@
+// TODO: impl thread::close.
+// TODO: use fiber ex functions to preserve floats.
+
 #include "Coroutines.hpp"
 
 #include "Ensures.hpp"
@@ -157,7 +160,6 @@ void Thread::Close()
     if (!self)
         CheckNoEntry();
 
-    // TODO: implement.
     WinApi::SwitchToFiber(self->m_fiberHandle);
 }
 
@@ -200,8 +202,8 @@ void Thread::ThreadAction()
 
     while (Intrin::AtomicCompareExchange(&m_threadStop, 0, 0) == 0)
     {
-        if (auto const userFiber = SharedData::DequeueUserFiber())
-            WinApi::SwitchToFiber(userFiber);
+        if (SharedData::DequeueUserFiber())
+            Console::PrintLine(" mew ");
 
         Intrin::YieldProcessor();
     }
