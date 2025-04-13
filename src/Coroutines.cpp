@@ -1,5 +1,6 @@
 // TODO: impl thread::close.
 // TODO: use fiber ex functions to preserve floats.
+// TODO: you can create fiber only from another fiber.
 
 #include "Coroutines.hpp"
 
