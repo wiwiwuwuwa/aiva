@@ -42,6 +42,9 @@ namespace
     class Thread final : public NonCopyable
     {
     public:
+        static void Yield();
+        [[noreturn]] static void Close();
+
         Thread();
         ~Thread();
 
@@ -52,6 +55,7 @@ namespace
         SpinLock m_threadLock;
         void* m_threadHandle;
         volatile uintptr_t m_threadStop;
+        void* m_fiberHandle;
     };
 
 
@@ -137,6 +141,27 @@ SharedData::~SharedData()
 }
 
 
+void Thread::Yield()
+{
+    auto const self = (Thread*)WinApi::TlsGetValue(SharedData::GetTlsHandle());
+    if (!self)
+        CheckNoEntry();
+
+    WinApi::SwitchToFiber(self->m_fiberHandle);
+}
+
+
+void Thread::Close()
+{
+    auto const self = (Thread*)WinApi::TlsGetValue(SharedData::GetTlsHandle());
+    if (!self)
+        CheckNoEntry();
+
+    // TODO: implement.
+    WinApi::SwitchToFiber(self->m_fiberHandle);
+}
+
+
 Thread::Thread()
 {
     Intrin::AtomicExchange(&m_threadStop, 0);
@@ -169,13 +194,21 @@ void Thread::ThreadAction()
     if (!WinApi::TlsSetValue(SharedData::GetTlsHandle(), this))
         CheckNoEntry();
 
+    m_fiberHandle = WinApi::ConvertThreadToFiber({});
+    if (!m_fiberHandle)
+        CheckNoEntry();
+
     while (Intrin::AtomicCompareExchange(&m_threadStop, 0, 0) == 0)
     {
-        if (SharedData::DequeueUserFiber())
-            Console::PrintLine("fiber");
+        if (auto const userFiber = SharedData::DequeueUserFiber())
+            WinApi::SwitchToFiber(userFiber);
 
         Intrin::YieldProcessor();
     }
+
+    if (!WinApi::ConvertFiberToThread())
+        CheckNoEntry();
+    m_fiberHandle = {};
 
     if (!WinApi::TlsSetValue(SharedData::GetTlsHandle(), {}))
         CheckNoEntry();
@@ -224,13 +257,13 @@ void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userDa
 
 void Coroutines::Yield()
 {
-    CheckNoEntry();
+    Thread::Yield();
 }
 
 
 [[noreturn]] void Coroutines::Close()
 {
-    CheckNoEntry();
+    Thread::Close();
 }
 
 

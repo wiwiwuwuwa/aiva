@@ -8,13 +8,11 @@ void Coroutine(Aiva::uintptr_t const userData)
 {
     auto const text = Aiva::CstrView{ (const char*)userData };
 
-    for (auto i = Aiva::size_t{}; i < 10; i++)
+    while (true)
     {
         Aiva::Console::Print(text);
         Aiva::Coroutines::Yield();
     }
-
-    Aiva::Coroutines::Close();
 }
 
 
