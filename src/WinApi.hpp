@@ -36,6 +36,7 @@ extern "C" { namespace Aiva::WinApi
     };
 
 
+    int __stdcall CloseHandle(void *const hObject);
     void* __stdcall ConvertThreadToFiber(void *const lpParameter);
     int __stdcall ConvertFiberToThread();
     void* __stdcall CreateFiber(size_t const dwStackSize, void *const lpStartAddress, void *const lpParameter);
