@@ -8,19 +8,22 @@ namespace Aiva
     class CstrView final
     {
     public:
-        CstrView();
-        CstrView(char const*const data);
-        operator bool() const;
-        operator char const*() const;
-        char const* c_str() const;
-        size_t StrLen() const;
-        char operator[](size_t const index) const;
+        constexpr CstrView();
+        constexpr CstrView(char const*const data);
+        constexpr operator bool() const;
+        constexpr operator char const*() const;
+        constexpr char const* c_str() const;
+        constexpr size_t StrLen() const;
+        constexpr char operator[](size_t const index) const;
 
     private:
         char const& m_data;
     };
 
 
-    size_t StrLen(CstrView const str);
+    constexpr size_t StrLen(CstrView const str);
 }
 // namespace Aiva
+
+
+#include "CstrView.inl"

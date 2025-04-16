@@ -45,6 +45,21 @@ namespace Aiva::Templates
     template <typename TType>
     constexpr RemoveReference_t<TType>&& Move(TType&& value);
 
+
+    template <bool TCond>
+    struct EnableIf final
+    {
+        static_assert(TCond, "EnableIf condition is not met");
+    };
+
+
+    template <>
+    struct EnableIf<true> final : public TypeIdentity<bool> {};
+
+
+    template <bool TCond>
+    using EnableIf_t = typename EnableIf<TCond>::Type_t;
+
     // ========================================================================
     // Numbers
     // ========================================================================

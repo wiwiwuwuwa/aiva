@@ -41,10 +41,18 @@ namespace Aiva::Templates
 
 
     template <typename TType>
+    constexpr bool IsInteger_v = IsInteger<TType>();
+
+
+    template <typename TType>
     constexpr bool IsFloating()
     {
         return TType(3) / TType(2) != TType(1);
     }
+
+
+    template <typename TType>
+    constexpr bool IsFloating_v = IsFloating<TType>();
 
 
     template <typename TType>
@@ -55,10 +63,18 @@ namespace Aiva::Templates
 
 
     template <typename TType>
+    constexpr bool IsUnsigned_v = IsUnsigned<TType>();
+
+
+    template <typename TType>
     constexpr bool IsSigned()
     {
         return TType(-1) < TType(0);
     }
+
+
+    template <typename TType>
+    constexpr bool IsSigned_v = IsSigned<TType>();
 
 
     template <typename TType>
