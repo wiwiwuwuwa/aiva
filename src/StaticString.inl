@@ -53,19 +53,25 @@ namespace Aiva
     template <typename TType, Templates::EnableIf_t<Templates::IsInteger_v<TType>>>
     constexpr StaticString256_t ToStaticString(TType const value)
     {
-        auto val = Math::Abs(value);
+        auto fstr = StaticString256_t{};
+
+        if (value == 0)
+        {
+            fstr += '0';
+            return fstr;
+        }
+
+        auto aval = Math::Abs(value);
         auto rstr = StaticString256_t{};
 
-        while (val > 0)
+        while (aval > 0)
         {
-            auto const dig = val % 10;
-            val /= 10;
+            auto const dig = aval % 10;
+            aval /= 10;
 
             auto const chr = '0' + dig;
             rstr += chr;
         }
-
-        auto fstr = StaticString256_t{};
 
         if (value < 0)
             fstr += '-';
