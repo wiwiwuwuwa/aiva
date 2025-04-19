@@ -8,6 +8,7 @@
 #include "NonCopyable.hpp"
 #include "Process.hpp"
 #include "Queue.hpp"
+#include "Span.hpp"
 #include "SpinLock.hpp"
 #include "WinApi.hpp"
 
@@ -83,12 +84,21 @@ namespace
     private:
         uint32_t m_threadLocalStorage;
         ManageObject<FiberQueue> m_fiberQueue;
-        ManageObject<Thread> m_thread;
+        Span<Thread> m_threads;
     };
 
 
     SpinLock GSystemLock;
     ManageObject<System> GSystem;
+
+
+    size_t GetNumberOfCores()
+    {
+        auto systemInfo = WinApi::SYSTEM_INFO{};
+        WinApi::GetSystemInfo(&systemInfo);
+
+        return (size_t)systemInfo.dwNumberOfProcessors;
+    }
 }
 // namespace
 
@@ -240,13 +250,19 @@ System::System()
         CheckNoEntry();
 
     m_fiberQueue.Construct();
-    m_thread.Construct(m_threadLocalStorage, m_fiberQueue.GetObject());
+
+    m_threads = Memory::GetHeapAlloc().CreateArray<Thread>(GetNumberOfCores(), m_threadLocalStorage, m_fiberQueue.GetObject());
+    if (!m_threads)
+        CheckNoEntry();
 }
 
 
 System::~System()
 {
-    m_thread.Destruct();
+    m_threads = Memory::GetHeapAlloc().DeleteArray(m_threads);
+    if (m_threads)
+        CheckNoEntry();
+
     m_fiberQueue.Destruct();
 
     if (!WinApi::TlsFree(m_threadLocalStorage))
