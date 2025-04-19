@@ -6,16 +6,16 @@
 namespace Aiva
 {
     template <typename TType>
-    class Queue final : public NonCopyable
+    class LinkedList final : public NonCopyable
     {
     public:
-        Queue() = default;
-        ~Queue();
+        LinkedList() = default;
+        ~LinkedList();
 
         bool IsEmpty() const;
-        void Enqueue(TType const& data);
-        void Enqueue(TType&& data);
-        TType Dequeue();
+        void PushBack(TType const& data);
+        void PushBack(TType&& data);
+        TType PopFront();
 
     private:
         struct Node final
@@ -31,4 +31,4 @@ namespace Aiva
 // namespace Aiva
 
 
-#include "Queue.inl"
+#include "LinkedList.inl"

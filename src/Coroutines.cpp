@@ -4,10 +4,10 @@
 #include "CstrView.hpp"
 #include "Ensures.hpp"
 #include "Intrin.hpp"
+#include "LinkedList.hpp"
 #include "ManageObject.hpp"
 #include "NonCopyable.hpp"
 #include "Process.hpp"
-#include "Queue.hpp"
 #include "Span.hpp"
 #include "SpinLock.hpp"
 #include "WinApi.hpp"
@@ -43,12 +43,12 @@ namespace
     class FiberQueue final : public NonCopyable
     {
     public:
-        void Enqueue(UserFiber& userFiber);
-        UserFiber* Dequeue();
+        void PushBack(UserFiber& userFiber);
+        UserFiber* PopFront();
 
     private:
         SpinLock m_lock;
-        Queue<UserFiber*> m_queue;
+        LinkedList<UserFiber*> m_queue;
     };
 
 
@@ -177,21 +177,17 @@ void UserFiber::FiberAction()
 }
 
 
-void FiberQueue::Enqueue(UserFiber& userFiber)
+void FiberQueue::PushBack(UserFiber& userFiber)
 {
     SpinLockScope_t const lockScope{ m_lock };
-    m_queue.Enqueue(&userFiber);
+    m_queue.PushBack(&userFiber);
 }
 
 
-UserFiber* FiberQueue::Dequeue()
+UserFiber* FiberQueue::PopFront()
 {
     SpinLockScope_t const lockScope{ m_lock };
-
-    if (!m_queue.IsEmpty())
-        return m_queue.Dequeue();
-    else
-        return nullptr;
+    return m_queue.PopFront();
 }
 
 
@@ -249,7 +245,7 @@ void Thread::ThreadAction()
 
     while (Intrin::AtomicCompareExchange(&m_stopFlag, 0, 0) == 0)
     {
-        auto const userFiber = m_fiberQueue.Dequeue();
+        auto const userFiber = m_fiberQueue.PopFront();
         if (!userFiber)
         {
             Intrin::YieldProcessor();
@@ -268,7 +264,7 @@ void Thread::ThreadAction()
             continue;
         }
 
-        m_fiberQueue.Enqueue(*userFiber);
+        m_fiberQueue.PushBack(*userFiber);
     }
 
     if (!WinApi::ConvertFiberToThread())
@@ -351,7 +347,7 @@ void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userDa
     if (!GSystem)
         CheckNoEntry();
 
-    GSystem->GetFiberQueue().Enqueue(userFiber);
+    GSystem->GetFiberQueue().PushBack(userFiber);
 }
 
 

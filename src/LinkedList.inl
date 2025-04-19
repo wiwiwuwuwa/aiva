@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Queue.hpp"
+#include "LinkedList.hpp"
 
 #include "Allocators.hpp"
-#include "Ensures.hpp"
 #include "Memory.hpp"
 #include "Templates.hpp"
 
@@ -11,7 +10,7 @@
 namespace Aiva
 {
     template <typename TType>
-    Queue<TType>::~Queue()
+    LinkedList<TType>::~LinkedList()
     {
         auto node = m_head;
 
@@ -26,14 +25,14 @@ namespace Aiva
 
 
     template <typename TType>
-    bool Queue<TType>::IsEmpty() const
+    bool LinkedList<TType>::IsEmpty() const
     {
         return !m_head;
     }
 
 
     template <typename TType>
-    void Queue<TType>::Enqueue(TType const& data)
+    void LinkedList<TType>::PushBack(TType const& data)
     {
         auto const node = &Memory::GetHeapAlloc().Create<Node>(data);
 
@@ -51,7 +50,7 @@ namespace Aiva
 
 
     template <typename TType>
-    void Queue<TType>::Enqueue(TType&& data)
+    void LinkedList<TType>::PushBack(TType&& data)
     {
         auto const node = &Memory::GetHeapAlloc().Create<Node>(Templates::Move(data));
 
@@ -69,10 +68,10 @@ namespace Aiva
 
 
     template <typename TType>
-    TType Queue<TType>::Dequeue()
+    TType LinkedList<TType>::PopFront()
     {
         if (!m_head)
-            CheckNoEntry();
+            return {};
 
         auto const data = Templates::Move(m_head->m_data);
 
