@@ -21,36 +21,26 @@ namespace
     class UserFiber final : public NonCopyable
     {
     public:
-        enum ConstructPending { kConstructPending };
-        enum ConstructSpawned { kConstructSpawned };
-
         using Action_t = void(*)(uintptr_t const userData);
 
-        UserFiber();
-        UserFiber(ConstructPending const, Action_t const fiberAction, uintptr_t const userData);
-        UserFiber(ConstructSpawned const, Action_t const fiberAction, uintptr_t const userData);
+        UserFiber(Action_t const fiberAction, uintptr_t const userData);
         ~UserFiber();
 
         void* GetOrAddFiberHandle();
 
     private:
-        enum class State { kInvalid, kPending, kSpawned };
+        __attribute__((stdcall)) static void FiberAction(void *const userData);
 
-        struct Pending final { Action_t m_fiberAction; uintptr_t m_userData; };
-        struct Spawned final { void* m_fiberHandle; };
-
-        State m_state;
-        union { Pending m_pending; Spawned m_spawned; };
+        Action_t m_fiberAction;
+        uintptr_t m_userData;
+        void* m_fiberHandle;
     };
 
 
     class FiberQueue final : public NonCopyable
     {
     public:
-        FiberQueue() = default;
-        ~FiberQueue() = default;
-
-        void Enqueue(UserFiber *const userFiber);
+        void Enqueue(UserFiber& userFiber);
         UserFiber* Dequeue();
 
     private:
@@ -66,14 +56,13 @@ namespace
         ~Thread();
 
     private:
-        static uint32_t __stdcall ThreadAction(void *const userData);
+        __attribute__((stdcall)) static uint32_t ThreadAction(void *const userData);
         void ThreadAction();
 
         uint32_t m_threadLocalStorage;
         FiberQueue& m_fiberQueue;
         volatile uintptr_t m_stopFlag;
         void* m_threadHandle;
-        void* m_fiberHandle;
     };
 
 
@@ -96,75 +85,54 @@ namespace
 // namespace
 
 
-UserFiber::UserFiber()
-{
-    m_state = State::kInvalid;
-}
-
-
-UserFiber::UserFiber(ConstructPending const, Action_t const fiberAction, uintptr_t const userData)
+UserFiber::UserFiber(Action_t const fiberAction, uintptr_t const userData) :
+    m_fiberAction{ fiberAction }, m_userData{ userData }, m_fiberHandle{ nullptr }
 {
     if (!fiberAction)
-        CheckNoEntry();
-
-    m_state = State::kPending;
-    m_pending = { fiberAction, userData };
-}
-
-
-UserFiber::UserFiber(ConstructSpawned const, Action_t const fiberAction, uintptr_t const userData)
-{
-    if (!fiberAction)
-        CheckNoEntry();
-
-    m_state = State::kSpawned;
-    m_spawned = { WinApi::CreateFiber(16384, (void*)fiberAction, (void*)userData) };
-
-    if (!m_spawned.m_fiberHandle)
         CheckNoEntry();
 }
 
 
 UserFiber::~UserFiber()
 {
-    if (m_state != State::kSpawned)
+    if (!m_fiberHandle)
         return;
 
-    WinApi::DeleteFiber(m_spawned.m_fiberHandle);
+    WinApi::DeleteFiber(m_fiberHandle);
 }
 
 
 void* UserFiber::GetOrAddFiberHandle()
 {
-    if (m_state == State::kSpawned)
-        return m_spawned.m_fiberHandle;
+    if (m_fiberHandle)
+        return m_fiberHandle;
 
-    if (m_state != State::kPending)
+    m_fiberHandle = WinApi::CreateFiber(16384, FiberAction, this);
+    if (!m_fiberHandle)
         CheckNoEntry();
 
-    m_state = State::kSpawned;
-    m_spawned = { WinApi::CreateFiber(16384, (void*)m_pending.m_fiberAction, (void*)m_pending.m_userData) };
-
-    if (!m_spawned.m_fiberHandle)
-        CheckNoEntry();
-
-    return m_spawned.m_fiberHandle;
+    return m_fiberHandle;
 }
 
 
-void FiberQueue::Enqueue(UserFiber *const userFiber)
+__attribute__((stdcall)) void UserFiber::FiberAction(void *const userData)
 {
-    if (!userFiber)
-        CheckNoEntry();
+    auto const self = (UserFiber*)userData;
+    self->m_fiberAction(self->m_userData);
+}
 
+
+void FiberQueue::Enqueue(UserFiber& userFiber)
+{
     SpinLockScope_t const lockScope{ m_lock };
-    m_queue.Enqueue(userFiber);
+    m_queue.Enqueue(&userFiber);
 }
 
 
 UserFiber* FiberQueue::Dequeue()
 {
     SpinLockScope_t const lockScope{ m_lock };
+
     if (!m_queue.IsEmpty())
         return m_queue.Dequeue();
     else
@@ -172,16 +140,13 @@ UserFiber* FiberQueue::Dequeue()
 }
 
 
-Thread::Thread(uint32_t const threadLocalStorage, FiberQueue& fiberQueue)
-    : m_fiberQueue(fiberQueue)
+Thread::Thread(uint32_t const threadLocalStorage, FiberQueue& fiberQueue) :
+    m_threadLocalStorage{ threadLocalStorage }, m_fiberQueue{ fiberQueue }, m_stopFlag{ 0 }
 {
     if (threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
         CheckNoEntry();
 
-    m_threadLocalStorage = threadLocalStorage;
-    m_stopFlag = 0;
-    m_threadHandle = WinApi::CreateThread(nullptr, 0, ThreadAction, this, 0, nullptr);
-
+    m_threadHandle = WinApi::CreateThread(nullptr, 16384, ThreadAction, this, 0, nullptr);
     if (!m_threadHandle)
         CheckNoEntry();
 }
@@ -196,14 +161,10 @@ Thread::~Thread()
 
     if (!WinApi::CloseHandle(m_threadHandle))
         CheckNoEntry();
-
-    m_threadHandle = nullptr;
-    m_stopFlag = 0;
-    m_threadLocalStorage = WinApi::TLS_OUT_OF_INDEXES;
 }
 
 
-uint32_t __stdcall Thread::ThreadAction(void *const userData)
+__attribute__((stdcall)) uint32_t Thread::ThreadAction(void *const userData)
 {
     auto const self = (Thread*)userData;
     self->ThreadAction();
@@ -214,11 +175,11 @@ uint32_t __stdcall Thread::ThreadAction(void *const userData)
 
 void Thread::ThreadAction()
 {
-    m_fiberHandle = WinApi::ConvertThreadToFiber(nullptr);
-    if (!m_fiberHandle)
+    auto const threadFiberHandle = WinApi::ConvertThreadToFiber(nullptr);
+    if (!threadFiberHandle)
         CheckNoEntry();
 
-    if (!WinApi::TlsSetValue(m_threadLocalStorage, m_fiberHandle))
+    if (!WinApi::TlsSetValue(m_threadLocalStorage, threadFiberHandle))
         CheckNoEntry();
 
     while (Intrin::AtomicCompareExchange(&m_stopFlag, 0, 0) == 0)
@@ -235,7 +196,7 @@ void Thread::ThreadAction()
             CheckNoEntry();
 
         WinApi::SwitchToFiber(fiberHandle);
-        m_fiberQueue.Enqueue(userFiber);
+        m_fiberQueue.Enqueue(*userFiber);
     }
 
     if (!WinApi::TlsSetValue(m_threadLocalStorage, nullptr))
@@ -243,7 +204,6 @@ void Thread::ThreadAction()
 
     if (!WinApi::ConvertFiberToThread())
         CheckNoEntry();
-    m_fiberHandle = nullptr;
 }
 
 
@@ -281,7 +241,7 @@ System::System()
 
     // ========================================================
     // delete me
-    m_fiberQueue->Enqueue(&Memory::GetHeapAlloc().Create<UserFiber>(UserFiber::kConstructPending, TEST_COROUTINE, uintptr_t{ 0 }));
+    m_fiberQueue->Enqueue(Memory::GetHeapAlloc().Create<UserFiber>(TEST_COROUTINE, uintptr_t{ 0 }));
     // delete me
     // ========================================================
 }

@@ -11,6 +11,7 @@ void Main()
     Aiva::Coroutines::InitSystem();
 
     Aiva::Console::PrintLine("Hello World!");
+    while (true) {};
 
     Aiva::Coroutines::ShutSystem();
     Aiva::Memory::ShutSystem();

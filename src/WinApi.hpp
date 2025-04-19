@@ -1,60 +1,93 @@
 #pragma once
-
 #include "Numbers.hpp"
+
 
 extern "C" { namespace Aiva::WinApi
 {
-    inline auto const INVALID_HANDLE_VALUE = (void*)(uintptr_t)(-1);
-    constexpr auto STD_INPUT_HANDLE = (uint32_t)(-10);
-    constexpr auto STD_OUTPUT_HANDLE = (uint32_t)(-11);
-    constexpr auto STD_ERROR_HANDLE = (uint32_t)(-12);
-    constexpr auto INFINITE = (uint32_t)(-1);
-    constexpr auto TLS_OUT_OF_INDEXES = (uint32_t)(-1);
-    constexpr auto WAIT_FAILED = (uint32_t)(-1);
+    using BYTE = uint8_t;
+    using WORD = uint16_t;
+    using DWORD = uint32_t;
+    using UINT = uint32_t;
+    using LONG = int32_t;
+    using BOOL = int32_t;
+    using HANDLE = void*;
+    using LPVOID = void*;
+    using LPCVOID = void const*;
+    using LPDWORD = DWORD*;
+    using LPBOOL = BOOL*;
+    using SIZE_T = size_t;
+    using ULONG_PTR = uintptr_t;
 
+    using LPTHREAD_START_ROUTINE = DWORD(__attribute__((stdcall))*)(LPVOID);
+    using LPFIBER_START_ROUTINE = void (__attribute__((stdcall))*)(LPVOID);
+
+    struct SECURITY_ATTRIBUTES final
+    {
+        DWORD nLength;
+        LPVOID lpSecurityDescriptor;
+        BOOL bInheritHandle;
+    };
+    using LPSECURITY_ATTRIBUTES = SECURITY_ATTRIBUTES*;
 
     struct SYSTEM_INFO
     {
         union
         {
-            uint32_t dwOemId;
+            DWORD dwOemId;
             struct
             {
-                uint16_t wProcessorArchitecture;
-                uint16_t wReserved;
-            } NONAME;
-        } NONAME;
-        uint32_t dwPageSize;
-        void* lpMinimumApplicationAddress;
-        void* lpMaximumApplicationAddress;
-        uintptr_t dwActiveProcessorMask;
-        uint32_t dwNumberOfProcessors;
-        uint32_t dwProcessorType;
-        uint32_t dwAllocationGranularity;
-        uint16_t wProcessorLevel;
-        uint16_t wProcessorRevision;
+                WORD wProcessorArchitecture;
+                WORD wReserved;
+            } DUMMY;
+        } DUMMYUNION;
+        DWORD dwPageSize;
+        LPVOID lpMinimumApplicationAddress;
+        LPVOID lpMaximumApplicationAddress;
+        ULONG_PTR dwActiveProcessorMask;
+        DWORD dwNumberOfProcessors;
+        DWORD dwProcessorType;
+        DWORD dwAllocationGranularity;
+        WORD wProcessorLevel;
+        WORD wProcessorRevision;
     };
+    using LPSYSTEM_INFO = SYSTEM_INFO*;
 
+    struct OVERLAPPED;
+    using LPOVERLAPPED = OVERLAPPED*;
 
-    int __stdcall CloseHandle(void *const hObject);
-    void* __stdcall ConvertThreadToFiber(void *const lpParameter);
-    int __stdcall ConvertFiberToThread();
-    void* __stdcall CreateFiber(size_t const dwStackSize, void *const lpStartAddress, void *const lpParameter);
-    void* __stdcall CreateThread(void *const lpThreadAttributes, size_t const dwStackSize, uint32_t (__stdcall *lpStartAddress)(void*), void *const lpParameter, uint32_t const dwCreationFlags, uint32_t *const lpThreadId);
-    void DeleteFiber(void *const lpFiber);
-    [[noreturn]] void __stdcall ExitProcess(uint32_t const uExitCode);
-    void* __stdcall GetStdHandle(uint32_t const nStdHandle);
-    void __stdcall GetSystemInfo(SYSTEM_INFO* const lpSystemInfo);
-    void* __stdcall HeapAlloc(void *const hHeap, uint32_t const dwFlags, size_t const dwBytes);
-    void* __stdcall HeapCreate(uint32_t const flOptions, size_t const dwInitialSize, size_t const dwMaximumSize);
-    int __stdcall HeapDestroy(void *const hHeap);
-    int __stdcall HeapFree(void *const hHeap, uint32_t const dwFlags, void *const lpMem);
-    [[noreturn]] void __stdcall SwitchToFiber(void *const lpFiber);
-    uint32_t __stdcall TlsAlloc();
-    int __stdcall TlsFree(uint32_t const dwTlsIndex);
-    void* __stdcall TlsGetValue(uint32_t const dwTlsIndex);
-    int __stdcall TlsSetValue(uint32_t const dwTlsIndex, void *const lpTlsValue);
-    uint32_t __stdcall WaitForSingleObject(void *const hHandle, uint32_t const dwMilliseconds);
-    int __stdcall WriteFile(void *const hFile, void const*const lpBuffer, uint32_t const nNumberOfBytesToWrite, uint32_t *const lpNumberOfBytesWritten, void *const lpOverlapped);
-}}
-// extern "C" { namespace Aiva
+    static const HANDLE INVALID_HANDLE_VALUE = (HANDLE)(ULONG_PTR)(-1);
+    constexpr DWORD STD_INPUT_HANDLE = (DWORD)(-10);
+    constexpr DWORD STD_OUTPUT_HANDLE = (DWORD)(-11);
+    constexpr DWORD STD_ERROR_HANDLE = (DWORD)(-12);
+    constexpr DWORD INFINITE = (DWORD)(-1);
+    constexpr DWORD TLS_OUT_OF_INDEXES = (DWORD)(-1);
+    constexpr DWORD WAIT_FAILED = (DWORD)(-1);
+
+    __attribute__((dllimport, stdcall)) HANDLE CreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
+    __attribute__((dllimport, stdcall)) BOOL CloseHandle(HANDLE hObject);
+    __attribute__((dllimport, stdcall)) DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
+
+    __attribute__((dllimport, stdcall)) DWORD TlsAlloc(void);
+    __attribute__((dllimport, stdcall)) BOOL TlsFree(DWORD dwTlsIndex);
+    __attribute__((dllimport, stdcall)) LPVOID TlsGetValue(DWORD dwTlsIndex);
+    __attribute__((dllimport, stdcall)) BOOL TlsSetValue(DWORD dwTlsIndex, LPVOID lpTlsValue);
+
+    [[noreturn]] __attribute__((dllimport, stdcall)) void ExitProcess(UINT uExitCode);
+
+    __attribute__((dllimport, stdcall)) HANDLE GetStdHandle(DWORD nStdHandle);
+    __attribute__((dllimport, stdcall)) BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
+
+    __attribute__((dllimport, stdcall)) HANDLE HeapCreate(DWORD flOptions, SIZE_T dwInitialSize, SIZE_T dwMaximumSize);
+    __attribute__((dllimport, stdcall)) BOOL HeapDestroy(HANDLE hHeap);
+    __attribute__((dllimport, stdcall)) LPVOID HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
+    __attribute__((dllimport, stdcall)) BOOL HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
+
+    __attribute__((dllimport, stdcall)) void GetSystemInfo(LPSYSTEM_INFO lpSystemInfo);
+
+    __attribute__((dllimport, stdcall)) LPVOID ConvertThreadToFiber(LPVOID lpParameter);
+    __attribute__((dllimport, stdcall)) BOOL ConvertFiberToThread(void);
+    __attribute__((dllimport, stdcall)) LPVOID CreateFiber(SIZE_T dwStackSize, LPFIBER_START_ROUTINE lpStartAddress, LPVOID lpParameter);
+    __attribute__((dllimport, stdcall)) void SwitchToFiber(LPVOID lpFiber);
+    __attribute__((dllimport, stdcall)) void DeleteFiber(LPVOID lpFiber);
+
+}} // extern "C" { namespace Aiva::WinApi
