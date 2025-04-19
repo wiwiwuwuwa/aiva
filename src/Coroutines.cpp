@@ -72,6 +72,9 @@ namespace
         System();
         ~System();
 
+        uint32_t GetThreadLocalStorage() const;
+        FiberQueue& GetFiberQueue();
+
     private:
         uint32_t m_threadLocalStorage;
         ManageObject<FiberQueue> m_fiberQueue;
@@ -207,43 +210,14 @@ void Thread::ThreadAction()
 }
 
 
-// ========================================================
-// delete me
-static uintptr_t GThreadLocalStorage = WinApi::TLS_OUT_OF_INDEXES;
-
-
-static void TEST_COROUTINE(uintptr_t const)
-{
-    Console::Print(" a ");
-    WinApi::SwitchToFiber(WinApi::TlsGetValue(Intrin::AtomicCompareExchange(&GThreadLocalStorage, 0, 0)));
-    Console::Print(" b ");
-    WinApi::SwitchToFiber(WinApi::TlsGetValue(Intrin::AtomicCompareExchange(&GThreadLocalStorage, 0, 0)));
-    Console::Print(" c ");
-}
-// delete me
-// ========================================================
-
-
 System::System()
 {
     m_threadLocalStorage = WinApi::TlsAlloc();
     if (m_threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
         CheckNoEntry();
 
-    // ========================================================
-    // delete me
-    Intrin::AtomicExchange(&GThreadLocalStorage, m_threadLocalStorage);
-    // delete me
-    // ========================================================
-
     m_fiberQueue.Construct();
     m_thread.Construct(m_threadLocalStorage, m_fiberQueue.GetObject());
-
-    // ========================================================
-    // delete me
-    m_fiberQueue->Enqueue(Memory::GetHeapAlloc().Create<UserFiber>(TEST_COROUTINE, uintptr_t{ 0 }));
-    // delete me
-    // ========================================================
 }
 
 
@@ -258,9 +232,25 @@ System::~System()
 }
 
 
+uint32_t System::GetThreadLocalStorage() const
+{
+    return m_threadLocalStorage;
+}
+
+
+FiberQueue& System::GetFiberQueue()
+{
+    return m_fiberQueue.GetObject();
+}
+
+
 void Coroutines::InitSystem()
 {
     SpinLockScope_t const lockScope{ GSystemLock };
+
+    if (GSystem)
+        CheckNoEntry();
+
     GSystem.Construct();
 }
 
@@ -268,7 +258,53 @@ void Coroutines::InitSystem()
 void Coroutines::ShutSystem()
 {
     SpinLockScope_t const lockScope{ GSystemLock };
+
+    if (!GSystem)
+        CheckNoEntry();
+
     GSystem.Destruct();
+}
+
+
+void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userData)
+{
+    SpinLockScope_t const lockScope{ GSystemLock };
+
+    if (!GSystem)
+        CheckNoEntry();
+
+    auto& userFiber = Memory::GetHeapAlloc().Create<UserFiber>(coroutineAction, userData);
+    GSystem->GetFiberQueue().Enqueue(userFiber);
+}
+
+
+void Coroutines::Yield()
+{
+    auto threadLocalStorage = uint32_t{};
+
+    {
+        SpinLockScope_t const lockScope{ GSystemLock };
+
+        if (!GSystem)
+            CheckNoEntry();
+
+        threadLocalStorage = GSystem->GetThreadLocalStorage();
+    }
+
+    if (threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
+        CheckNoEntry();
+
+    auto const threadFiberHandle = WinApi::TlsGetValue(threadLocalStorage);
+    if (!threadFiberHandle)
+        CheckNoEntry();
+
+    WinApi::SwitchToFiber(threadFiberHandle);
+}
+
+
+[[noreturn]] void Coroutines::Close()
+{
+    CheckNoEntry();
 }
 
 
