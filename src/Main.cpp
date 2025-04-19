@@ -1,11 +1,11 @@
 #include "Console.hpp"
-#include "Coroutines_Core.hpp"
+#include "Coroutines.hpp"
 #include "Memory.hpp"
 #include "Process.hpp"
 #include "StaticString.hpp"
 
 
-static void TEST_COROUTINE_A(Aiva::Coroutines::Core::Control const& control)
+static void TEST_COROUTINE_A(Aiva::Coroutines::IControl const& control)
 {
     Aiva::CstrView const messages1[] = { "(coroutine a : step 1 : ", Aiva::ToStaticString(control.GetCurrWorker()), ")" };
     Aiva::Console::PrintLine(messages1);
@@ -22,7 +22,7 @@ static void TEST_COROUTINE_A(Aiva::Coroutines::Core::Control const& control)
 }
 
 
-static void TEST_COROUTINE_B(Aiva::Coroutines::Core::Control const& control)
+static void TEST_COROUTINE_B(Aiva::Coroutines::IControl const& control)
 {
     Aiva::CstrView const messages1[] = { "(coroutine b : step 1 : ", Aiva::ToStaticString(control.GetCurrWorker()), ")" };
     Aiva::Console::PrintLine(messages1);
@@ -43,14 +43,14 @@ void Main()
 {
     Aiva::Console::InitSystem();
     Aiva::Memory::InitSystem();
-    Aiva::Coroutines::Core::InitSystem();
+    Aiva::Coroutines::InitSystem();
 
     Aiva::Console::PrintLine("Hello World!");
-    Aiva::Coroutines::Core::Spawn(TEST_COROUTINE_A);
-    Aiva::Coroutines::Core::Spawn(TEST_COROUTINE_B);
+    Aiva::Coroutines::Spawn([] (auto const& control) { TEST_COROUTINE_A(control); });
+    Aiva::Coroutines::Spawn([] (auto const& control) { TEST_COROUTINE_B(control); });
     while (true) {};
 
-    Aiva::Coroutines::Core::ShutSystem();
+    Aiva::Coroutines::ShutSystem();
     Aiva::Memory::ShutSystem();
     Aiva::Console::ShutSystem();
 
