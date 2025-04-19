@@ -14,7 +14,7 @@ Span<byte_t> AllocatorBase::Alloc(size_t const) const
 }
 
 
-nullptr_t AllocatorBase::Free(Span<byte_t>) const
+nullptr_t AllocatorBase::Free(Span<byte_t> const&) const
 {
     CheckNoEntry();
 }

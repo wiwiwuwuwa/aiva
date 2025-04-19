@@ -2,17 +2,20 @@
 
 #include "Span.hpp"
 
-#include "Console.hpp"
-#include "CstrView.hpp"
-#include "Ensures.hpp"
-#include "Process.hpp"
-
 
 namespace Aiva
 {
     template <typename TType>
     constexpr Span<TType>::Span()
         : m_size{ 0 }, m_data{ nullptr }
+    {
+
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(size_t const size, TType& data)
+        : m_size{ size }, m_data{ &data }
     {
 
     }
@@ -63,20 +66,8 @@ namespace Aiva
 
 
     template <typename TType>
-    Span<TType>::Span(size_t const size, TType& data)
-        : m_size{ size }, m_data{ &data }
+    constexpr TType& Span<TType>::GetDataRef() const
     {
-        if (size <= 0)
-            CheckNoEntry();
-    }
-
-
-    template <typename TType>
-    TType& Span<TType>::GetDataRef() const
-    {
-        if (!m_data)
-            CheckNoEntry();
-
         return *m_data;
     }
 

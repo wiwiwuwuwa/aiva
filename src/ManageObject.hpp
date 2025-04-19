@@ -13,8 +13,8 @@ namespace Aiva
         constexpr void Construct(TArgs&&... args);
         constexpr void Destruct();
 
-        constexpr TType& GetObject();
-        constexpr TType const& GetObject() const;
+        constexpr TType& GetObjectRef();
+        constexpr TType const& GetObjectRef() const;
 
         constexpr operator bool() const;
         constexpr TType& operator*();

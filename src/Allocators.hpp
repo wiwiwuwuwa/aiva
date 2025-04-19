@@ -10,7 +10,7 @@ namespace Aiva
     {
     public:
         virtual Span<byte_t> Alloc(size_t const size) const;
-        virtual nullptr_t Free(Span<byte_t> const span) const;
+        virtual nullptr_t Free(Span<byte_t> const& span) const;
 
     public:
         template <typename TType, typename... TArgs>

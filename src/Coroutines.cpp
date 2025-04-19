@@ -288,7 +288,7 @@ System::System()
 
     m_fiberQueue.Construct();
 
-    m_threads = Memory::GetHeapAlloc().CreateArray<Thread>(GetNumberOfCores(), m_threadLocalStorage, m_fiberQueue.GetObject());
+    m_threads = Memory::GetHeapAlloc().CreateArray<Thread>(GetNumberOfCores(), m_threadLocalStorage, m_fiberQueue.GetObjectRef());
     if (!m_threads)
         CheckNoEntry();
 }
@@ -316,7 +316,7 @@ uint32_t System::GetThreadLocalStorage() const
 
 FiberQueue& System::GetFiberQueue()
 {
-    return m_fiberQueue.GetObject();
+    return m_fiberQueue.GetObjectRef();
 }
 
 

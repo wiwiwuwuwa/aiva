@@ -1,9 +1,12 @@
 #include "Memory.hpp"
 
 #include "Allocators.hpp"
+#include "Console.hpp"
+#include "CstrView.hpp"
 #include "Ensures.hpp"
 #include "ManageObject.hpp"
 #include "NonCopyable.hpp"
+#include "Process.hpp"
 #include "Span.hpp"
 #include "SpinLock.hpp"
 #include "WinApi.hpp"
@@ -22,7 +25,7 @@ namespace
         ~HeapAllocator() override;
 
         Span<byte_t> Alloc(size_t const size) const override;
-        nullptr_t Free(Span<byte_t> const span) const override;
+        nullptr_t Free(Span<byte_t> const& span) const override;
 
     private:
         void* m_heap;
@@ -47,7 +50,7 @@ HeapAllocator::~HeapAllocator()
 {
     if (!WinApi::HeapDestroy(m_heap))
         CheckNoEntry();
-    m_heap = {};
+    m_heap = nullptr;
 }
 
 
@@ -61,7 +64,7 @@ Span<byte_t> HeapAllocator::Alloc(size_t const size) const
 }
 
 
-nullptr_t HeapAllocator::Free(Span<byte_t> const span) const
+nullptr_t HeapAllocator::Free(Span<byte_t> const& span) const
 {
     if (!WinApi::HeapFree(m_heap, {}, span.GetDataPtr()))
         CheckNoEntry();
@@ -73,6 +76,10 @@ nullptr_t HeapAllocator::Free(Span<byte_t> const span) const
 void Memory::InitSystem()
 {
     SpinLockScope_t const lockScope{ GHeapAllocLock };
+
+    if (GHeapAlloc)
+        CheckNoEntry();
+
     GHeapAlloc.Construct();
 }
 
@@ -80,6 +87,10 @@ void Memory::InitSystem()
 void Memory::ShutSystem()
 {
     SpinLockScope_t const lockScope{ GHeapAllocLock };
+
+    if (!GHeapAlloc)
+        CheckNoEntry();
+
     GHeapAlloc.Destruct();
 }
 
@@ -87,5 +98,9 @@ void Memory::ShutSystem()
 AllocatorBase const& Memory::GetHeapAlloc()
 {
     SpinLockScope_t const lockScope{ GHeapAllocLock };
+
+    if (!GHeapAlloc)
+        CheckNoEntry();
+
     return *GHeapAlloc;
 }

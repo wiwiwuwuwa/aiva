@@ -17,7 +17,6 @@ namespace
     {
     public:
         Printer();
-        ~Printer() = default;
 
         void Print(CstrView const message) const;
         void Error(CstrView const message) const;
@@ -30,8 +29,8 @@ namespace
 // namespace
 
 
-static SpinLock GPrinterLock{};
-static ManageObject<Printer> GPrinter{};
+static SpinLock GPrinterLock;
+static ManageObject<Printer> GPrinter;
 
 
 Printer::Printer()
@@ -68,6 +67,9 @@ void Console::InitSystem()
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
 
+    if (GPrinter)
+        Process::ExitFailure();
+
     GPrinter.Construct();
 }
 
@@ -76,71 +78,69 @@ void Console::ShutSystem()
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
 
+    if (!GPrinter)
+        Process::ExitFailure();
+
     GPrinter.Destruct();
 }
 
 
 void Console::Print(CstrView const message)
 {
-    SpinLockScope_t const lockScope{ GPrinterLock };
-
-    GPrinter->Print(message);
+    Print(Span<const CstrView>{ message });
 }
 
 
 void Console::PrintLine(CstrView const message)
 {
-    SpinLockScope_t const lockScope{ GPrinterLock };
-
-    GPrinter->Print(message);
-    GPrinter->Print("\n");
-}
-
-
-void Console::Print(Span<const CstrView> const messages)
-{
-    SpinLockScope_t const lockScope{ GPrinterLock };
-
-    for (auto i = size_t{}; i < messages.GetSize(); i++)
-        GPrinter->Print(messages[i]);
-}
-
-
-void Console::PrintLine(Span<const CstrView> const messages)
-{
-    SpinLockScope_t const lockScope{ GPrinterLock };
-
-    for (auto i = size_t{}; i < messages.GetSize(); i++)
-        GPrinter->Print(messages[i]);
-
-    GPrinter->Print("\n");
+    PrintLine(Span<const CstrView>{ message });
 }
 
 
 void Console::Error(CstrView const message)
 {
-    SpinLockScope_t const lockScope{ GPrinterLock };
-
-    GPrinter->Error("\033[31m");
-    GPrinter->Error(message);
-    GPrinter->Error("\033[0m");
+    Error(Span<const CstrView>{ message });
 }
 
 
 void Console::ErrorLine(CstrView const message)
 {
-    SpinLockScope_t const lockScope{ GPrinterLock };
-
-    GPrinter->Error("\033[31m");
-    GPrinter->Error(message);
-    GPrinter->Error("\033[0m");
-    GPrinter->Error("\n");
+    ErrorLine(Span<const CstrView>{ message });
 }
 
 
-void Console::Error(Span<const CstrView> const messages)
+void Console::Print(Span<const CstrView> const& messages)
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
+
+    if (!GPrinter)
+        Process::ExitFailure();
+
+    for (auto i = size_t{}; i < messages.GetSize(); i++)
+        GPrinter->Print(messages[i]);
+}
+
+
+void Console::PrintLine(Span<const CstrView> const& messages)
+{
+    SpinLockScope_t const lockScope{ GPrinterLock };
+
+    if (!GPrinter)
+        Process::ExitFailure();
+
+    for (auto i = size_t{}; i < messages.GetSize(); i++)
+        GPrinter->Print(messages[i]);
+
+    GPrinter->Print("\n");
+}
+
+
+void Console::Error(Span<const CstrView> const& messages)
+{
+    SpinLockScope_t const lockScope{ GPrinterLock };
+
+    if (!GPrinter)
+        Process::ExitFailure();
 
     for (auto i = size_t{}; i < messages.GetSize(); i++)
     {
@@ -151,9 +151,12 @@ void Console::Error(Span<const CstrView> const messages)
 }
 
 
-void Console::ErrorLine(Span<const CstrView> const messages)
+void Console::ErrorLine(Span<const CstrView> const& messages)
 {
     SpinLockScope_t const lockScope{ GPrinterLock };
+
+    if (!GPrinter)
+        Process::ExitFailure();
 
     for (auto i = size_t{}; i < messages.GetSize(); i++)
     {
