@@ -31,6 +31,7 @@ namespace
 
     private:
         __attribute__((stdcall)) static void FiberAction(void *const userData);
+        void FiberAction();
 
         Action_t m_fiberAction;
         uintptr_t m_userData;
@@ -99,6 +100,35 @@ namespace
 
         return (size_t)systemInfo.dwNumberOfProcessors;
     }
+
+
+    void Coroutine_Yield()
+    {
+        auto const threadLocalStorage = GSystem->GetThreadLocalStorage();
+        if (threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
+            CheckNoEntry();
+
+        auto const thread = (Thread*)WinApi::TlsGetValue(threadLocalStorage);
+        if (!thread)
+            CheckNoEntry();
+
+        thread->SwitchToFiber(false);
+    }
+
+
+    void Coroutine_Close()
+    {
+        auto const threadLocalStorage = GSystem->GetThreadLocalStorage();
+        if (threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
+            CheckNoEntry();
+
+        auto const thread = (Thread*)WinApi::TlsGetValue(threadLocalStorage);
+        if (!thread)
+            CheckNoEntry();
+
+        thread->SwitchToFiber(true);
+        CheckNoEntry();
+    }
 }
 // namespace
 
@@ -136,7 +166,14 @@ void UserFiber::SwitchToFiber()
 __attribute__((stdcall)) void UserFiber::FiberAction(void *const userData)
 {
     auto const self = (UserFiber*)userData;
-    self->m_fiberAction(self->m_userData);
+    self->FiberAction();
+}
+
+
+void UserFiber::FiberAction()
+{
+    m_fiberAction(m_userData);
+    Coroutine_Close();
 }
 
 
@@ -320,49 +357,5 @@ void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userDa
 
 void Coroutines::Yield()
 {
-    auto threadLocalStorage = uint32_t{};
-
-    {
-        SpinLockScope_t const lockScope{ GSystemLock };
-
-        if (!GSystem)
-            CheckNoEntry();
-
-        threadLocalStorage = GSystem->GetThreadLocalStorage();
-    }
-
-    if (threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
-        CheckNoEntry();
-
-    auto thread = (Thread*)WinApi::TlsGetValue(threadLocalStorage);
-    if (!thread)
-        CheckNoEntry();
-
-    thread->SwitchToFiber(false);
-}
-
-
-[[noreturn]] void Coroutines::Close()
-{
-    auto threadLocalStorage = uint32_t{};
-
-    {
-        SpinLockScope_t const lockScope{ GSystemLock };
-
-        if (!GSystem)
-            CheckNoEntry();
-
-        threadLocalStorage = GSystem->GetThreadLocalStorage();
-    }
-
-    if (threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
-        CheckNoEntry();
-
-    auto thread = (Thread*)WinApi::TlsGetValue(threadLocalStorage);
-    if (!thread)
-        CheckNoEntry();
-
-    thread->SwitchToFiber(true);
-
-    CheckNoEntry();
+    Coroutine_Yield();
 }

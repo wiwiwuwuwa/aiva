@@ -15,7 +15,6 @@ static void TEST_COROUTINE_A(Aiva::uintptr_t const)
         Aiva::Console::Print(" c ");
         Aiva::Coroutines::Yield();
     }
-    Aiva::Coroutines::Close();
 }
 
 
@@ -30,7 +29,6 @@ static void TEST_COROUTINE_B(Aiva::uintptr_t const)
         Aiva::Console::Print(" 3 ");
         Aiva::Coroutines::Yield();
     }
-    Aiva::Coroutines::Close();
 }
 
 
