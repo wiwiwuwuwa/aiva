@@ -17,6 +17,10 @@ namespace Aiva
         void PushBack(TType&& data);
         TType PopFront();
 
+    public:
+        template <typename TCond>
+        TType PopFirst(TCond const& condition);
+
     private:
         struct Node final
         {

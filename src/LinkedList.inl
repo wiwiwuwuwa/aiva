@@ -92,5 +92,39 @@ namespace Aiva
 
         return data;
     }
+
+
+    template <typename TType>
+    template <typename TCond>
+    TType LinkedList<TType>::PopFirst(TCond const& condition)
+    {
+        if (!m_head)
+            return {};
+
+        auto prev = (Node*)nullptr;
+        auto node = m_head;
+
+        while (node && !condition(node->m_data))
+        {
+            prev = node;
+            node = node->m_next;
+        }
+
+        if (!node)
+            return {};
+
+        if (node == m_head)
+            m_head = m_head->m_next;
+        else
+            prev->m_next = node->m_next;
+
+        if (node == m_tail)
+            m_tail = prev;
+
+        auto const data = Templates::Move(node->m_data);
+        Memory::GetHeapAlloc().Delete(*node);
+
+        return data;
+    }
 }
 // namespace Aiva
