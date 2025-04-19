@@ -21,18 +21,19 @@ namespace
     class UserFiber final : public NonCopyable
     {
     public:
-        using Action_t = void(*)(uintptr_t const userData);
+        using Action_t = void(&)(uintptr_t const userData);
 
-        UserFiber(Action_t const fiberAction, uintptr_t const userData);
+        UserFiber(Action_t fiberAction, uintptr_t const userData);
         ~UserFiber();
 
-        void* GetOrAddFiberHandle();
+        void SwitchToFiber();
 
     private:
         __attribute__((stdcall)) static void FiberAction(void *const userData);
 
         Action_t m_fiberAction;
         uintptr_t m_userData;
+
         void* m_fiberHandle;
     };
 
@@ -55,6 +56,8 @@ namespace
         Thread(uint32_t const threadLocalStorage, FiberQueue& fiberQueue);
         ~Thread();
 
+        void SwitchToFiber(bool const closeUserFiber);
+
     private:
         __attribute__((stdcall)) static uint32_t ThreadAction(void *const userData);
         void ThreadAction();
@@ -63,6 +66,8 @@ namespace
         FiberQueue& m_fiberQueue;
         volatile uintptr_t m_stopFlag;
         void* m_threadHandle;
+        void* m_fiberHandle;
+        bool m_closeUserFiber;
     };
 
 
@@ -88,7 +93,7 @@ namespace
 // namespace
 
 
-UserFiber::UserFiber(Action_t const fiberAction, uintptr_t const userData) :
+UserFiber::UserFiber(Action_t fiberAction, uintptr_t const userData) :
     m_fiberAction{ fiberAction }, m_userData{ userData }, m_fiberHandle{ nullptr }
 {
     if (!fiberAction)
@@ -102,19 +107,19 @@ UserFiber::~UserFiber()
         return;
 
     WinApi::DeleteFiber(m_fiberHandle);
+    m_fiberHandle = nullptr;
 }
 
 
-void* UserFiber::GetOrAddFiberHandle()
+void UserFiber::SwitchToFiber()
 {
-    if (m_fiberHandle)
-        return m_fiberHandle;
+    if (!m_fiberHandle)
+        m_fiberHandle = WinApi::CreateFiber(16384, FiberAction, this);
 
-    m_fiberHandle = WinApi::CreateFiber(16384, FiberAction, this);
     if (!m_fiberHandle)
         CheckNoEntry();
 
-    return m_fiberHandle;
+    WinApi::SwitchToFiber(m_fiberHandle);
 }
 
 
@@ -144,7 +149,7 @@ UserFiber* FiberQueue::Dequeue()
 
 
 Thread::Thread(uint32_t const threadLocalStorage, FiberQueue& fiberQueue) :
-    m_threadLocalStorage{ threadLocalStorage }, m_fiberQueue{ fiberQueue }, m_stopFlag{ 0 }
+    m_threadLocalStorage{ threadLocalStorage}, m_fiberQueue{ fiberQueue }, m_stopFlag{ 0 }
 {
     if (threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
         CheckNoEntry();
@@ -167,6 +172,16 @@ Thread::~Thread()
 }
 
 
+void Thread::SwitchToFiber(bool const closeUserFiber)
+{
+    if (!m_fiberHandle)
+        CheckNoEntry();
+
+    m_closeUserFiber = closeUserFiber;
+    WinApi::SwitchToFiber(m_fiberHandle);
+}
+
+
 __attribute__((stdcall)) uint32_t Thread::ThreadAction(void *const userData)
 {
     auto const self = (Thread*)userData;
@@ -178,11 +193,11 @@ __attribute__((stdcall)) uint32_t Thread::ThreadAction(void *const userData)
 
 void Thread::ThreadAction()
 {
-    auto const threadFiberHandle = WinApi::ConvertThreadToFiber(nullptr);
-    if (!threadFiberHandle)
+    if (!WinApi::TlsSetValue(m_threadLocalStorage, this))
         CheckNoEntry();
 
-    if (!WinApi::TlsSetValue(m_threadLocalStorage, threadFiberHandle))
+    m_fiberHandle = WinApi::ConvertThreadToFiber(nullptr);
+    if (!m_fiberHandle)
         CheckNoEntry();
 
     while (Intrin::AtomicCompareExchange(&m_stopFlag, 0, 0) == 0)
@@ -194,18 +209,26 @@ void Thread::ThreadAction()
             continue;
         }
 
-        auto const fiberHandle = userFiber->GetOrAddFiberHandle();
-        if (!fiberHandle)
-            CheckNoEntry();
+        m_closeUserFiber = false;
+        userFiber->SwitchToFiber();
 
-        WinApi::SwitchToFiber(fiberHandle);
+        auto const closeUserFiber = m_closeUserFiber;
+        m_closeUserFiber = false;
+
+        if (closeUserFiber)
+        {
+            Memory::GetHeapAlloc().Delete(*userFiber);
+            continue;
+        }
+
         m_fiberQueue.Enqueue(*userFiber);
     }
 
-    if (!WinApi::TlsSetValue(m_threadLocalStorage, nullptr))
-        CheckNoEntry();
-
     if (!WinApi::ConvertFiberToThread())
+        CheckNoEntry();
+    m_fiberHandle = nullptr;
+
+    if (!WinApi::TlsSetValue(m_threadLocalStorage, nullptr))
         CheckNoEntry();
 }
 
@@ -268,12 +291,13 @@ void Coroutines::ShutSystem()
 
 void Coroutines::Spawn(CoroutineAction_t coroutineAction, uintptr_t const userData)
 {
+    auto& userFiber = Memory::GetHeapAlloc().Create<UserFiber>(coroutineAction, userData);
+
     SpinLockScope_t const lockScope{ GSystemLock };
 
     if (!GSystem)
         CheckNoEntry();
 
-    auto& userFiber = Memory::GetHeapAlloc().Create<UserFiber>(coroutineAction, userData);
     GSystem->GetFiberQueue().Enqueue(userFiber);
 }
 
@@ -294,16 +318,36 @@ void Coroutines::Yield()
     if (threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
         CheckNoEntry();
 
-    auto const threadFiberHandle = WinApi::TlsGetValue(threadLocalStorage);
-    if (!threadFiberHandle)
+    auto thread = (Thread*)WinApi::TlsGetValue(threadLocalStorage);
+    if (!thread)
         CheckNoEntry();
 
-    WinApi::SwitchToFiber(threadFiberHandle);
+    thread->SwitchToFiber(false);
 }
 
 
 [[noreturn]] void Coroutines::Close()
 {
+    auto threadLocalStorage = uint32_t{};
+
+    {
+        SpinLockScope_t const lockScope{ GSystemLock };
+
+        if (!GSystem)
+            CheckNoEntry();
+
+        threadLocalStorage = GSystem->GetThreadLocalStorage();
+    }
+
+    if (threadLocalStorage == WinApi::TLS_OUT_OF_INDEXES)
+        CheckNoEntry();
+
+    auto thread = (Thread*)WinApi::TlsGetValue(threadLocalStorage);
+    if (!thread)
+        CheckNoEntry();
+
+    thread->SwitchToFiber(true);
+
     CheckNoEntry();
 }
 
