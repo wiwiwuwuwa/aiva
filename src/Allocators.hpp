@@ -13,6 +13,13 @@ namespace Aiva
         virtual nullptr_t Free(Span<byte_t> const& span) const;
 
     public:
+        template <typename TType>
+        Span<TType> AllocArray(size_t const size) const;
+
+        template <typename TType>
+        nullptr_t FreeArray(Span<TType> const& span) const;
+
+    public:
         template <typename TType, typename... TArgs>
         TType& Create(TArgs&&... args) const;
 

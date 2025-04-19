@@ -1,34 +1,41 @@
 #include "Console.hpp"
-#include "Coroutines.hpp"
+#include "Coroutines_Core.hpp"
 #include "Memory.hpp"
 #include "Process.hpp"
+#include "StaticString.hpp"
 
 
-static void TEST_COROUTINE_A(Aiva::uintptr_t const)
+static void TEST_COROUTINE_A(Aiva::Coroutines::Core::Control const& control)
 {
-    for (auto i = Aiva::size_t{ 1 }; i <= Aiva::size_t{ 5 }; i++)
-    {
-        Aiva::Console::Print(" a ");
-        Aiva::Coroutines::Yield();
-        Aiva::Console::Print(" b ");
-        Aiva::Coroutines::Yield();
-        Aiva::Console::Print(" c ");
-        Aiva::Coroutines::Yield();
-    }
+    Aiva::CstrView const messages1[] = { "(coroutine a : step 1 : ", Aiva::ToStaticString(control.GetCurrWorker()), ")" };
+    Aiva::Console::PrintLine(messages1);
+
+    control.Yield();
+
+    Aiva::CstrView const messages2[] = { "(coroutine a : step 2 : ", Aiva::ToStaticString(control.GetCurrWorker()), ")" };
+    Aiva::Console::PrintLine(messages2);
+
+    control.Yield();
+
+    Aiva::CstrView const messages3[] = { "(coroutine a : step 3 : ", Aiva::ToStaticString(control.GetCurrWorker()), ")" };
+    Aiva::Console::PrintLine(messages3);
 }
 
 
-static void TEST_COROUTINE_B(Aiva::uintptr_t const)
+static void TEST_COROUTINE_B(Aiva::Coroutines::Core::Control const& control)
 {
-    for (auto i = Aiva::size_t{ 1 }; i <= Aiva::size_t{ 5 }; i++)
-    {
-        Aiva::Console::Print(" 1 ");
-        Aiva::Coroutines::Yield();
-        Aiva::Console::Print(" 2 ");
-        Aiva::Coroutines::Yield();
-        Aiva::Console::Print(" 3 ");
-        Aiva::Coroutines::Yield();
-    }
+    Aiva::CstrView const messages1[] = { "(coroutine b : step 1 : ", Aiva::ToStaticString(control.GetCurrWorker()), ")" };
+    Aiva::Console::PrintLine(messages1);
+
+    control.Yield();
+
+    Aiva::CstrView const messages2[] = { "(coroutine b : step 2 : ", Aiva::ToStaticString(control.GetCurrWorker()), ")" };
+    Aiva::Console::PrintLine(messages2);
+
+    control.Yield();
+
+    Aiva::CstrView const messages3[] = { "(coroutine b : step 3 : ", Aiva::ToStaticString(control.GetCurrWorker()), ")" };
+    Aiva::Console::PrintLine(messages3);
 }
 
 
@@ -36,14 +43,14 @@ void Main()
 {
     Aiva::Console::InitSystem();
     Aiva::Memory::InitSystem();
-    Aiva::Coroutines::InitSystem();
+    Aiva::Coroutines::Core::InitSystem();
 
     Aiva::Console::PrintLine("Hello World!");
-    Aiva::Coroutines::Spawn(TEST_COROUTINE_A, 0);
-    Aiva::Coroutines::Spawn(TEST_COROUTINE_B, 0);
+    Aiva::Coroutines::Core::Spawn(TEST_COROUTINE_A);
+    Aiva::Coroutines::Core::Spawn(TEST_COROUTINE_B);
     while (true) {};
 
-    Aiva::Coroutines::ShutSystem();
+    Aiva::Coroutines::Core::ShutSystem();
     Aiva::Memory::ShutSystem();
     Aiva::Console::ShutSystem();
 

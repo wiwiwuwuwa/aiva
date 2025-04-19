@@ -9,6 +9,36 @@
 
 namespace Aiva
 {
+    template <typename TType>
+    Span<TType> AllocatorBase::AllocArray(size_t const size) const
+    {
+        auto const spanOfBytes = Alloc(sizeof(TType) * size);
+        if (!spanOfBytes)
+            CheckNoEntry();
+
+        auto const spanOfObjects = CastSpan<TType>(spanOfBytes);
+        if (!spanOfObjects)
+            CheckNoEntry();
+
+        return spanOfObjects;
+    }
+
+
+    template <typename TType>
+    nullptr_t AllocatorBase::FreeArray(Span<TType> const& span) const
+    {
+        auto const spanOfObjects = span;
+        if (!spanOfObjects)
+            CheckNoEntry();
+
+        auto const spanOfBytes = CastSpan<byte_t>(spanOfObjects);
+        if (!spanOfBytes)
+            CheckNoEntry();
+
+        return Free(spanOfBytes);
+    }
+
+
     template <typename TType, typename... TArgs>
     TType& AllocatorBase::Create(TArgs&&... args) const
     {
