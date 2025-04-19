@@ -176,5 +176,21 @@ namespace Aiva::Templates
         else
             { return nullptr; }
     }
+
+
+    template <typename TType>
+    constexpr size_t CountOfBits()
+    {
+        auto val = (NumberIdentity_t<NumberType::Int, NumberSign::None, GetNumberSize<TType>()>)(-1);
+        auto cnt = size_t{};
+
+        while (val)
+        {
+            val >>= 1;
+            cnt++;
+        }
+
+        return cnt;
+    }
 }
 // namespace Aiva::Templates

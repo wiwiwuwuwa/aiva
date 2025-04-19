@@ -6,6 +6,7 @@
 #include "Intrin.hpp"
 #include "LinkedList.hpp"
 #include "ManageObject.hpp"
+#include "Math.hpp"
 #include "NonCopyable.hpp"
 #include "Process.hpp"
 #include "Span.hpp"
@@ -101,7 +102,7 @@ namespace
         auto systemInfo = WinApi::SYSTEM_INFO{};
         WinApi::GetSystemInfo(&systemInfo);
 
-        return (size_t)systemInfo.dwNumberOfProcessors;
+        return Math::Min(Templates::CountOfBits_v<uintptr_t>, (size_t)systemInfo.dwNumberOfProcessors);
     }
 
 

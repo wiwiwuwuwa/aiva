@@ -128,6 +128,14 @@ namespace Aiva::Templates
 
     template <NumberType TType, NumberSign TSign, NumberSize TSize>
     using NumberIdentity_t = typename NumberIdentity<TType, TSign, TSize>::Type_t;
+
+
+    template <typename TType>
+    constexpr size_t CountOfBits();
+
+
+    template <typename TType>
+    constexpr auto CountOfBits_v = CountOfBits<TType>();
 }
 // namespace Aiva::Templates
 
