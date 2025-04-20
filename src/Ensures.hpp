@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Console.hpp"
+#include "CstrView.hpp"
+#include "Process.hpp"
+
 
 #define CheckNoEntry_Stringify(x) #x
 #define CheckNoEntry_ToString(x) CheckNoEntry_Stringify(x)
