@@ -18,7 +18,7 @@ using namespace Aiva::Memory;
 
 namespace
 {
-    class HeapAllocator final : public NonCopyable, public AllocatorBase
+    class HeapAllocator final : public NonCopyable, public IAllocator
     {
     public:
         HeapAllocator();
@@ -95,7 +95,7 @@ void Memory::ShutSystem()
 }
 
 
-AllocatorBase const& Memory::GetHeapAlloc()
+IAllocator const& Memory::GetHeapAlloc()
 {
     SpinLockScope_t const lockScope{ GHeapAllocLock };
 

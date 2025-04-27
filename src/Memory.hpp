@@ -3,7 +3,7 @@
 
 namespace Aiva
 {
-    class AllocatorBase;
+    class IAllocator;
 }
 // namespace Aiva
 
@@ -13,6 +13,6 @@ namespace Aiva::Memory
     void InitSystem();
     void ShutSystem();
 
-    AllocatorBase const& GetHeapAlloc();
+    IAllocator const& GetHeapAlloc();
 }
 // namespace Aiva::Memory

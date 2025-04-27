@@ -9,14 +9,19 @@ namespace Aiva::Console
     void InitSystem();
     void ShutSystem();
 
-    void Print(CstrView const message);
-    void PrintLine(CstrView const message);
-    void Error(CstrView const message);
-    void ErrorLine(CstrView const message);
+    template <typename... TArgs>
+    void Print(TArgs const&... args);
 
-    void Print(Span<const CstrView> const& messages);
-    void PrintLine(Span<const CstrView> const& messages);
-    void Error(Span<const CstrView> const& messages);
-    void ErrorLine(Span<const CstrView> const& messages);
+    template <typename... TArgs>
+    void PrintLine(TArgs const&... args);
+
+    template <typename... TArgs>
+    void Error(TArgs const&... args);
+
+    template <typename... TArgs>
+    void ErrorLine(TArgs const&... args);
 }
 // namespace Aiva
+
+
+#include "Console.inl"

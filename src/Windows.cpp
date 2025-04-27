@@ -49,9 +49,6 @@ namespace
     private:
         ManageObject<WindowClass> m_windowClass;
         ManageObject<Window> m_window;
-        ManageObject<Window> m_window1;
-        ManageObject<Window> m_window2;
-        ManageObject<Window> m_window3;
     };
 
 
@@ -105,10 +102,6 @@ Window::~Window()
 
 void Window::WindowRoutine(Coroutines::IControl const& control)
 {
-    auto const pinnedWorker = control.GetCurrWorker();
-    if (!pinnedWorker)
-        CheckNoEntry();
-
     m_handle = WinApi::CreateWindowExW
     (
         /*dwExStyle*/ 0,
@@ -165,7 +158,7 @@ void Window::WindowRoutine(Coroutines::IControl const& control)
             WinApi::DispatchMessageW(&msg);
         }
 
-        control.Yield(pinnedWorker);
+        control.YieldOnCurrWorker();
     }
 
     if (!WinApi::DestroyWindow(m_handle))
@@ -180,19 +173,11 @@ System::System()
 {
     m_windowClass.Construct();
     m_window.Construct();
-
-    m_window1.Construct();
-    m_window2.Construct();
-    m_window3.Construct();
 }
 
 
 System::~System()
 {
-    m_window3.Destruct();
-    m_window2.Destruct();
-    m_window1.Destruct();
-
     m_window.Destruct();
     m_windowClass.Destruct();
 }

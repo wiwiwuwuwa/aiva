@@ -6,7 +6,7 @@
 
 namespace Aiva
 {
-    class AllocatorBase
+    class IAllocator
     {
     public:
         virtual Span<byte_t> Alloc(size_t const size) const;
@@ -33,7 +33,7 @@ namespace Aiva
         nullptr_t DeleteArray(Span<TType> const& data) const;
 
     protected:
-        virtual ~AllocatorBase() = default;
+        virtual ~IAllocator() = default;
     };
 }
 // namespace Aiva

@@ -1,4 +1,4 @@
-#include "Coroutines_Core.hpp"
+#include "Coroutines_Minimal.hpp"
 
 #include "Console.hpp"
 #include "CstrView.hpp"
@@ -15,7 +15,7 @@
 
 
 using namespace Aiva;
-using namespace Aiva::Coroutines::Core;
+using namespace Aiva::Coroutines::Minimal;
 
 
 namespace
@@ -380,7 +380,7 @@ FiberQueue& System::GetFiberQueue()
 }
 
 
-void Coroutines::Core::InitSystem()
+void Coroutines::Minimal::InitSystem()
 {
     SpinLockScope_t const lockScope{ GSystemLock };
 
@@ -391,7 +391,7 @@ void Coroutines::Core::InitSystem()
 }
 
 
-void Coroutines::Core::ShutSystem()
+void Coroutines::Minimal::ShutSystem()
 {
     SpinLockScope_t const lockScope{ GSystemLock };
 
@@ -402,13 +402,13 @@ void Coroutines::Core::ShutSystem()
 }
 
 
-void Coroutines::Core::Spawn(CoroutineFunc_t coroutineFunc, uintptr_t const userData)
+void Coroutines::Minimal::Spawn(CoroutineFunc_t coroutineFunc, uintptr_t const userData)
 {
     SpawnOnWorker(coroutineFunc, kAnyWorkerMask, userData);
 }
 
 
-void Coroutines::Core::SpawnOnWorker(CoroutineFunc_t coroutineFunc, uintptr_t const workerMask, uintptr_t const userData)
+void Coroutines::Minimal::SpawnOnWorker(CoroutineFunc_t coroutineFunc, uintptr_t const workerMask, uintptr_t const userData)
 {
     auto& userFiber = Memory::GetHeapAlloc().Create<UserFiber>(coroutineFunc, userData, workerMask);
 

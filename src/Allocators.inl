@@ -10,7 +10,7 @@
 namespace Aiva
 {
     template <typename TType>
-    Span<TType> AllocatorBase::AllocArray(size_t const size) const
+    Span<TType> IAllocator::AllocArray(size_t const size) const
     {
         auto const spanOfBytes = Alloc(sizeof(TType) * size);
         if (!spanOfBytes)
@@ -25,7 +25,7 @@ namespace Aiva
 
 
     template <typename TType>
-    nullptr_t AllocatorBase::FreeArray(Span<TType> const& span) const
+    nullptr_t IAllocator::FreeArray(Span<TType> const& span) const
     {
         auto const spanOfObjects = span;
         if (!spanOfObjects)
@@ -40,7 +40,7 @@ namespace Aiva
 
 
     template <typename TType, typename... TArgs>
-    TType& AllocatorBase::Create(TArgs&&... args) const
+    TType& IAllocator::Create(TArgs&&... args) const
     {
         auto const spanOfBytes = Alloc(sizeof(TType));
         auto const spanOfObject = CastSpan<TType>(spanOfBytes);
@@ -53,7 +53,7 @@ namespace Aiva
 
 
     template <typename TType, typename... TArgs>
-    Span<TType> AllocatorBase::CreateArray(size_t const size, TArgs&&... args) const
+    Span<TType> IAllocator::CreateArray(size_t const size, TArgs&&... args) const
     {
         auto const spanOfBytes = Alloc(sizeof(TType) * size);
         auto const spanOfObjects = CastSpan<TType>(spanOfBytes);
@@ -69,7 +69,7 @@ namespace Aiva
 
 
     template <typename TType>
-    nullptr_t AllocatorBase::Delete(TType& data) const
+    nullptr_t IAllocator::Delete(TType& data) const
     {
         auto const spanOfObject = Span{ data };
         auto const spanOfBytes = CastSpan<byte_t>(spanOfObject);
@@ -80,7 +80,7 @@ namespace Aiva
 
 
     template <typename TType>
-    nullptr_t AllocatorBase::DeleteArray(Span<TType> const& data) const
+    nullptr_t IAllocator::DeleteArray(Span<TType> const& data) const
     {
         for (auto i = data.GetSize(); i > size_t{}; i--)
         {

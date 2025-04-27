@@ -12,16 +12,6 @@
 
 #define CheckNoEntry() \
 { \
-    Aiva::CstrView const messages[] = \
-    { \
-        __FILE__, \
-        "(", \
-        CheckNoEntry_GetCodeLine(), \
-        "): ", \
-        __func__, \
-        ": NO_ENTRY_POINT." \
-    }; \
- \
-    Aiva::Console::ErrorLine(messages); \
+    Aiva::Console::ErrorLine(__FILE__, "(", CheckNoEntry_GetCodeLine(), "): ", __func__, ": NO_ENTRY_POINT."); \
     Aiva::Process::ExitFailure(); \
 } \

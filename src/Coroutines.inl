@@ -15,7 +15,7 @@ namespace Aiva::Coroutines
         class CoroutineWrapper final
         {
         public:
-            static void CoroutineFunc(Core::Control const& control)
+            static void CoroutineFunc(Minimal::Control const& control)
             {
                 auto const coroutineInstance = (TCoroutine*)control.GetUserData();
                 if (!coroutineInstance)
@@ -24,12 +24,12 @@ namespace Aiva::Coroutines
                 class ControlWrapper final : public IControl
                 {
                 public:
-                    ControlWrapper(Core::Control const& control) : m_control{ control } {}
+                    ControlWrapper(Minimal::Control const& control) : m_control{ control } {}
                     uintptr_t GetCurrWorker() const override { return m_control.GetCurrWorker(); }
                     void Yield(uintptr_t const workerMask) const override { m_control.YieldOnWorker(workerMask); }
 
                 private:
-                    Core::Control const& m_control;
+                    Minimal::Control const& m_control;
                 };
 
                 auto const controlInstance = ControlWrapper{ control };
@@ -43,6 +43,6 @@ namespace Aiva::Coroutines
         };
 
         auto& coroutineInstance = Memory::GetHeapAlloc().Create<TCoroutine>(Templates::Forward<TCoroutine>(coroutine));
-        Core::SpawnOnWorker(CoroutineWrapper::CoroutineFunc, workerMask, (uintptr_t)&coroutineInstance);
+        Minimal::SpawnOnWorker(CoroutineWrapper::CoroutineFunc, workerMask, (uintptr_t)&coroutineInstance);
     }
 }

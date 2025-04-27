@@ -5,13 +5,19 @@ using namespace Aiva;
 using namespace Aiva::Coroutines;
 
 
+void IControl::YieldOnCurrWorker() const
+{
+    Yield(GetCurrWorker());
+}
+
+
 void Coroutines::InitSystem()
 {
-    Core::InitSystem();
+    Minimal::InitSystem();
 }
 
 
 void Coroutines::ShutSystem()
 {
-    Core::ShutSystem();
+    Minimal::ShutSystem();
 }

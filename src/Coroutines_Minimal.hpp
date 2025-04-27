@@ -3,7 +3,7 @@
 #include "Numbers.hpp"
 
 
-namespace Aiva::Coroutines::Core
+namespace Aiva::Coroutines::Minimal
 {
     struct Control;
 

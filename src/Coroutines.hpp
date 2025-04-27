@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Coroutines_Core.hpp"
+#include "Coroutines_Minimal.hpp"
 
 
 namespace Aiva::Coroutines
 {
-    auto constexpr kAnyWorkerMask = Core::kAnyWorkerMask;
+    auto constexpr kAnyWorkerMask = Minimal::kAnyWorkerMask;
 
 
     class IControl
@@ -15,6 +15,9 @@ namespace Aiva::Coroutines
         virtual void Yield(uintptr_t const workerMask = kAnyWorkerMask) const = 0;
 
         virtual ~IControl() = default;
+
+    public:
+        void YieldOnCurrWorker() const;
     };
 
 
