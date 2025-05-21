@@ -3,12 +3,13 @@
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "1.2.8"
+    "@types/bun": "1.2.13"
   },
   "peerDependencies": {
-    "typescript": "5.8.2"
+    "typescript": "5.8.3"
   },
   "scripts": {
-    "build": "bun run builder.ts"
+    "build": "bun run builder.ts",
+    "start": "../bin/aiva.exe"
   }
 }
