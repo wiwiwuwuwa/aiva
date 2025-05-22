@@ -2,9 +2,8 @@
 // です。
 
 
-// ========================================================
-// Module: Basic Templates
-// ========================================================
+// ------------------------------------
+// "basic_templates.hpp"
 
 
 namespace Aiva::Templates
@@ -14,9 +13,8 @@ namespace Aiva::Templates
 }
 
 
-// ========================================================
-// Module: Number Templates
-// ========================================================
+// ------------------------------------
+// "number_templates.hpp"
 
 
 namespace Aiva::Templates
@@ -76,7 +74,8 @@ namespace Aiva::Templates
 }
 
 
-// --------------------------------------------------------
+// ------------------------------------
+// "number_templates.inl"
 
 
 namespace Aiva::Templates
@@ -172,9 +171,8 @@ namespace Aiva::Templates
 }
 
 
-// ========================================================
-// Module: Primitive Types
-// ========================================================
+// ------------------------------------
+// "primitive_types.hpp"
 
 
 namespace Aiva
@@ -203,4 +201,150 @@ namespace Aiva
 
     enum class byte_t : uint8_t {};
     using size_t = decltype(sizeof(byte_t));
+}
+
+
+// ------------------------------------
+// "winapi.hpp"
+
+
+extern "C" { namespace Aiva::WinApi
+{
+    // Base Types
+
+    using UINT = uint32_t;
+
+    // Process Management
+
+    [[noreturn]] __attribute__((dllimport, stdcall)) void ExitProcess(UINT const uExitCode);
+}}
+
+
+// ------------------------------------
+// "process.hpp"
+
+
+namespace Aiva::Process
+{
+    [[noreturn]] void ExitSuccess();
+    [[noreturn]] void ExitFailure();
+}
+
+
+// ------------------------------------
+// "process.inl"
+
+
+namespace Aiva::Process
+{
+    [[noreturn]] void ExitSuccess()
+    {
+        WinApi::ExitProcess(0);
+    }
+
+
+    [[noreturn]] void ExitFailure()
+    {
+        WinApi::ExitProcess(1);
+    }
+}
+
+
+// ------------------------------------
+// "cstr_view.hpp"
+
+
+namespace Aiva
+{
+    class CstrView final
+    {
+    public:
+        constexpr CstrView();
+        constexpr CstrView(char const*const data);
+        constexpr CstrView(char const& data);
+        constexpr operator bool() const;
+        constexpr operator char const*() const;
+        constexpr operator char const&() const;
+        constexpr char const* c_str() const;
+        constexpr size_t StrLen() const;
+        constexpr char operator[](size_t const index) const;
+
+    private:
+        char const& m_data;
+    };
+
+
+    constexpr size_t StrLen(CstrView const str);
+}
+
+
+// ------------------------------------
+// "cstr_view.inl"
+
+
+namespace Aiva
+{
+    constexpr CstrView::CstrView() : m_data{ *"" }
+    {
+        //
+    }
+
+
+    constexpr CstrView::CstrView(char const*const data) : m_data{ data ? *data : *"" }
+    {
+        //
+    }
+
+
+    constexpr CstrView::CstrView(char const& data) : m_data{ data }
+    {
+        //
+    }
+
+
+    constexpr CstrView::operator bool() const
+    {
+        return (&m_data)[0] != '\0';
+    }
+
+
+    constexpr CstrView::operator char const*() const
+    {
+        return &m_data;
+    }
+
+
+    constexpr CstrView::operator char const&() const
+    {
+        return m_data;
+    }
+
+
+    constexpr char const* CstrView::c_str() const
+    {
+        return &m_data;
+    }
+
+
+    constexpr size_t CstrView::StrLen() const
+    {
+        auto length = size_t{};
+
+        while ((&m_data)[length] != '\0')
+            length++;
+
+        return length;
+    }
+
+
+    constexpr char CstrView::operator[](size_t const index) const
+    {
+        return (&m_data)[index];
+    }
+
+
+    constexpr size_t StrLen(CstrView const str)
+    {
+        return str.StrLen();
+    }
 }
