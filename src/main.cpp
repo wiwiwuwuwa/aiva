@@ -3,5 +3,5 @@
 
 void Main()
 {
-    //
+    Aiva::Process::ExitSuccess();
 }

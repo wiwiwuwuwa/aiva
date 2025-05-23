@@ -10,6 +10,36 @@ namespace Aiva::Templates
 {
     template <typename...>
     using Void_t = void;
+
+
+    template <typename TType>
+    constexpr TType&& Forward(TType& value);
+
+
+    template <typename TType>
+    constexpr TType&& Forward(TType&& value);
+
+}
+
+
+// ------------------------------------
+// "basic_templates.inl"
+
+
+namespace Aiva::Templates
+{
+    template <typename TType>
+    constexpr TType&& Forward(TType& value)
+    {
+        return static_cast<TType&&>(value);
+    }
+
+
+    template <typename TType>
+    constexpr TType&& Forward(TType&& value)
+    {
+        return static_cast<TType&&>(value);
+    }
 }
 
 
@@ -661,5 +691,148 @@ namespace Aiva
 
             Intrin::YieldProcessor();
         }
+    }
+}
+
+
+// ------------------------------------
+// "new.hpp"
+
+
+void* operator new(size_t const size, void *const ptr);
+void* operator new[](size_t const size, void *const ptr);
+
+
+// ------------------------------------
+// "new.inl"
+
+
+void* operator new(size_t const, void *const ptr)
+{
+    return ptr;
+}
+
+
+void* operator new[](size_t const, void *const ptr)
+{
+    return ptr;
+}
+
+
+// ------------------------------------
+// "manage_object.hpp"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    class ManageObject final : public NonCopyable
+    {
+    public:
+        template <typename... TArgs>
+        constexpr void Construct(TArgs&&... args);
+        constexpr void Destruct();
+
+        constexpr operator bool() const;
+        constexpr TType& operator*();
+        constexpr TType const& operator*() const;
+        constexpr TType* operator->();
+        constexpr TType const* operator->() const;
+
+        constexpr TType& GetObjectRef();
+        constexpr TType const& GetObjectRef() const;
+        constexpr TType* GetObjectPtr();
+        constexpr TType const* GetObjectPtr() const;
+
+    private:
+        alignas(alignof(TType)) byte_t m_object[sizeof(TType)];
+        TType* m_ptr = nullptr;
+    };
+}
+
+
+// ------------------------------------
+// "manage_object.inl
+
+
+namespace Aiva
+{
+    template <typename TType>
+    template <typename... TArgs>
+    constexpr void ManageObject<TType>::Construct(TArgs&&... args)
+    {
+        new (m_object) TType{ Templates::Forward<TArgs>(args)... };
+        m_ptr = (TType*)m_object;
+    }
+
+
+    template <typename TType>
+    constexpr void ManageObject<TType>::Destruct()
+    {
+        m_ptr = nullptr;
+        ((TType*)m_object)->~TType();
+    }
+
+
+    template <typename TType>
+    constexpr ManageObject<TType>::operator bool() const
+    {
+        return m_ptr;
+    }
+
+
+    template <typename TType>
+    constexpr TType& ManageObject<TType>::operator*()
+    {
+        return *m_ptr;
+    }
+
+
+    template <typename TType>
+    constexpr TType const& ManageObject<TType>::operator*() const
+    {
+        return *m_ptr;
+    }
+
+
+    template <typename TType>
+    constexpr TType* ManageObject<TType>::operator->()
+    {
+        return m_ptr;
+    }
+
+
+    template <typename TType>
+    constexpr TType const* ManageObject<TType>::operator->() const
+    {
+        return m_ptr;
+    }
+
+
+    template <typename TType>
+    constexpr TType& ManageObject<TType>::GetObjectRef()
+    {
+        return *m_ptr;
+    }
+
+
+    template <typename TType>
+    constexpr TType const& ManageObject<TType>::GetObjectRef() const
+    {
+        return *m_ptr;
+    }
+
+
+    template <typename TType>
+    constexpr TType* ManageObject<TType>::GetObjectPtr()
+    {
+        return m_ptr;
+    }
+
+
+    template <typename TType>
+    constexpr TType const* ManageObject<TType>::GetObjectPtr() const
+    {
+        return m_ptr;
     }
 }
