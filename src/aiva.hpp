@@ -201,6 +201,7 @@ namespace Aiva
 
     enum class byte_t : uint8_t {};
     using size_t = decltype(sizeof(byte_t));
+    using nullptr_t = decltype(nullptr);
 }
 
 
@@ -260,14 +261,16 @@ namespace Aiva
     {
     public:
         constexpr CstrView();
-        constexpr CstrView(char const*const data);
         constexpr CstrView(char const& data);
-        constexpr operator bool() const;
-        constexpr operator char const*() const;
+        constexpr CstrView(char const*const data);
         constexpr operator char const&() const;
-        constexpr char const* c_str() const;
+        constexpr operator char const*() const;
+
+        constexpr operator bool() const;
         constexpr size_t StrLen() const;
         constexpr char operator[](size_t const index) const;
+        constexpr char const& GetDataRef() const;
+        constexpr char const* GetDataPtr() const;
 
     private:
         char const& m_data;
@@ -290,27 +293,15 @@ namespace Aiva
     }
 
 
-    constexpr CstrView::CstrView(char const*const data) : m_data{ data ? *data : *"" }
-    {
-        //
-    }
-
-
     constexpr CstrView::CstrView(char const& data) : m_data{ data }
     {
         //
     }
 
 
-    constexpr CstrView::operator bool() const
+    constexpr CstrView::CstrView(char const*const data) : m_data{ data ? *data : *"" }
     {
-        return (&m_data)[0] != '\0';
-    }
-
-
-    constexpr CstrView::operator char const*() const
-    {
-        return &m_data;
+        //
     }
 
 
@@ -320,9 +311,15 @@ namespace Aiva
     }
 
 
-    constexpr char const* CstrView::c_str() const
+    constexpr CstrView::operator char const*() const
     {
         return &m_data;
+    }
+
+
+    constexpr CstrView::operator bool() const
+    {
+        return (&m_data)[0] != '\0';
     }
 
 
@@ -346,5 +343,161 @@ namespace Aiva
     constexpr size_t StrLen(CstrView const str)
     {
         return str.StrLen();
+    }
+
+
+    constexpr char const& CstrView::GetDataRef() const
+    {
+        return m_data;
+    }
+
+
+    constexpr char const* CstrView::GetDataPtr() const
+    {
+        return &m_data;
+    }
+}
+
+
+// ------------------------------------
+// "span.hpp"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    class Span final
+    {
+    public:
+        constexpr Span();
+        constexpr Span(size_t const size, TType& data);
+        constexpr Span(size_t const size, TType *const data);
+        constexpr Span(TType& data);
+        constexpr Span(TType *const data);
+        constexpr Span(nullptr_t const);
+
+        constexpr operator bool() const;
+        constexpr size_t GetSize() const;
+        constexpr TType& operator[](size_t const index) const;
+        constexpr TType& GetDataRef() const;
+        constexpr TType* GetDataPtr() const;
+
+    private:
+        size_t m_size;
+        TType* m_data;
+    };
+}
+
+
+// ------------------------------------
+// "span.inl"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    constexpr Span<TType>::Span()
+    {
+        m_size = 0;
+        m_data = nullptr;
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(size_t const size, TType& data)
+    {
+        if (size > 0)
+        {
+            m_size = size;
+            m_data = &data;
+        }
+        else
+        {
+            m_size = 0;
+            m_data = nullptr;
+        }
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(size_t const size, TType *const data)
+    {
+        if (size > 0 && data)
+        {
+            m_size = size;
+            m_data = data;
+        }
+        else
+        {
+            m_size = 0;
+            m_data = nullptr;
+        }
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(TType& data)
+    {
+        m_size = 1;
+        m_data = &data;
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(TType *const data)
+    {
+        if (data)
+        {
+            m_size = 1;
+            m_data = data;
+        }
+        else
+        {
+            m_size = 0;
+            m_data = nullptr;
+        }
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(nullptr_t const)
+    {
+        m_size = 0;
+        m_data = nullptr;
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::operator bool() const
+    {
+        return m_size > 0 && m_data;
+    }
+
+
+    template <typename TType>
+    constexpr size_t Span<TType>::GetSize() const
+    {
+        return m_size;
+    }
+
+
+    template <typename TType>
+    constexpr TType& Span<TType>::operator[](size_t const index) const
+    {
+        return m_data[index];
+    }
+
+
+    template <typename TType>
+    constexpr TType& Span<TType>::GetDataRef() const
+    {
+        return *m_data;
+    }
+
+
+    template <typename TType>
+    constexpr TType* Span<TType>::GetDataPtr() const
+    {
+        return m_data;
     }
 }
