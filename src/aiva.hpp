@@ -222,6 +222,52 @@ extern "C" { namespace Aiva::WinApi
 
 
 // ------------------------------------
+// "intrin.hpp"
+
+
+namespace Aiva::Intrin
+{
+    inline uintptr_t AtomicCompareExchange(volatile uintptr_t *const Destination, uintptr_t const Comperand, uintptr_t const Exchange);
+    inline uintptr_t AtomicExchange(volatile uintptr_t *const Destination, uintptr_t const Exchange);
+
+    inline void YieldProcessor();
+}
+
+
+// ------------------------------------
+// "intrin.inl"
+
+
+namespace Aiva::Intrin
+{
+    inline uintptr_t AtomicCompareExchange(volatile uintptr_t *const Destination, uintptr_t const Comperand, uintptr_t const Exchange)
+    {
+        auto comperand = Comperand;
+        auto exchange = Exchange;
+        __atomic_compare_exchange(Destination, &comperand, &exchange, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+
+        return comperand;
+    }
+
+
+    inline uintptr_t AtomicExchange(volatile uintptr_t *const Destination, uintptr_t const Exchange)
+    {
+        auto exchange = Exchange;
+        auto previous = uintptr_t{};
+        __atomic_exchange(Destination, &exchange, &previous, __ATOMIC_SEQ_CST);
+
+        return previous;
+    }
+
+
+    inline void YieldProcessor()
+    {
+        __builtin_ia32_pause();
+    }
+}
+
+
+// ------------------------------------
 // "process.hpp"
 
 
@@ -499,5 +545,121 @@ namespace Aiva
     constexpr TType* Span<TType>::GetDataPtr() const
     {
         return m_data;
+    }
+}
+
+
+// ------------------------------------
+// "non_copyable.hpp"
+
+
+namespace Aiva
+{
+    class NonCopyable
+    {
+    public:
+        NonCopyable(NonCopyable const&) = delete;
+        NonCopyable& operator=(NonCopyable const&) = delete;
+        NonCopyable(NonCopyable&&) = delete;
+        NonCopyable& operator=(NonCopyable&&) = delete;
+
+    protected:
+        NonCopyable() = default;
+        ~NonCopyable() = default;
+    };
+}
+
+
+// ------------------------------------
+// "lock_scope.hpp"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    class LockScope : public NonCopyable
+    {
+    public:
+        LockScope(TType const& lock);
+        ~LockScope();
+
+    private:
+        TType& m_lock;
+    };
+}
+
+
+// ------------------------------------
+// "lock_scope.inl"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    LockScope<TType>::LockScope(TType const& lock) : m_lock{ const_cast<TType&>(lock) }
+    {
+        m_lock.Lock();
+    }
+
+
+    template <typename TType>
+    LockScope<TType>::~LockScope()
+    {
+        m_lock.Unlock();
+    }
+}
+
+
+// ------------------------------------
+// "spin_lock.hpp"
+
+
+namespace Aiva
+{
+    class SpinLock final : public NonCopyable
+    {
+    public:
+        SpinLock() = default;
+        ~SpinLock() = default;
+
+        void Lock();
+        void Unlock();
+
+    private:
+        volatile uintptr_t m_locked{};
+    };
+
+
+    using SpinLockScope_t = LockScope<SpinLock>;
+}
+
+
+// ------------------------------------
+// "spin_lock.inl"
+
+
+namespace Aiva
+{
+    void SpinLock::Lock()
+    {
+        while (true)
+        {
+            if (Intrin::AtomicCompareExchange(&m_locked, 0, 1) == 0)
+                break;
+
+            Intrin::YieldProcessor();
+        }
+    }
+
+
+    void SpinLock::Unlock()
+    {
+        while (true)
+        {
+            if (Intrin::AtomicCompareExchange(&m_locked, 1, 0) == 1)
+                break;
+
+            Intrin::YieldProcessor();
+        }
     }
 }
