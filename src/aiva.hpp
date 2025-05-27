@@ -243,11 +243,34 @@ extern "C" { namespace Aiva::WinApi
 {
     // Base Types
 
+    using DWORD = uint32_t;
     using UINT = uint32_t;
+    using BOOL = sint32_t;
+    using HANDLE = void*;
+    using LPCVOID = void const*;
+    using LPDWORD = DWORD*;
+    using LONG_PTR = sintptr_t;
+
+    // Structures
+
+    struct OVERLAPPED;
+    using LPOVERLAPPED = OVERLAPPED*;
+
+    // Constants
+
+    static auto const INVALID_HANDLE_VALUE = (HANDLE)(LONG_PTR)(-1);
+    static auto const STD_INPUT_HANDLE = (DWORD)(-10);
+    static auto const STD_OUTPUT_HANDLE = (DWORD)(-11);
+    static auto const STD_ERROR_HANDLE = (DWORD)(-12);
 
     // Process Management
 
     [[noreturn]] __attribute__((dllimport, stdcall)) void ExitProcess(UINT const uExitCode);
+
+    // File Management
+
+    __attribute__((dllimport, stdcall)) HANDLE GetStdHandle(DWORD nStdHandle);
+    __attribute__((dllimport, stdcall)) BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
 }}
 
 
@@ -835,4 +858,153 @@ namespace Aiva
     {
         return m_ptr;
     }
+}
+
+
+// ------------------------------------
+// "console.hpp"
+
+
+namespace Aiva
+{
+    class Console final
+    {
+    public:
+        static void InitSystem();
+        static void ShutSystem();
+
+        template <typename... TArgs>
+        static void Print(TArgs const&... args);
+
+        template <typename... TArgs>
+        static void PrintLine(TArgs const&... args);
+
+        template <typename... TArgs>
+        static void Error(TArgs const&... args);
+
+        template <typename... TArgs>
+        static void ErrorLine(TArgs const&... args);
+
+    private:
+        Console() = delete;
+
+        static void Print_Impl(Span<const CstrView> const& messages);
+        static void Error_Impl(Span<const CstrView> const& messages);
+
+        static SpinLock GLock;
+        static bool GInitialized;
+        static WinApi::HANDLE GPrintHandle;
+        static WinApi::HANDLE GErrorHandle;
+    };
+}
+
+
+// ------------------------------------
+// "console.inl
+
+
+namespace Aiva
+{
+    void Console::InitSystem()
+    {
+        SpinLockScope_t const lockScope{ GLock };
+
+        if (GInitialized)
+            Process::ExitFailure();
+
+        GPrintHandle = WinApi::GetStdHandle(WinApi::STD_OUTPUT_HANDLE);
+        if (!GPrintHandle || GPrintHandle == WinApi::INVALID_HANDLE_VALUE)
+            Process::ExitFailure();
+
+        GErrorHandle = WinApi::GetStdHandle(WinApi::STD_ERROR_HANDLE);
+        if (!GErrorHandle || GErrorHandle == WinApi::INVALID_HANDLE_VALUE)
+            Process::ExitFailure();
+
+        GInitialized = true;
+    }
+
+
+    void Console::ShutSystem()
+    {
+        SpinLockScope_t const lockScope{ GLock };
+
+        if (!GInitialized)
+            Process::ExitFailure();
+
+        GInitialized = false;
+    }
+
+
+    template <typename... TArgs>
+    void Console::Print(TArgs const&... args)
+    {
+        CstrView const messages[]{ CstrView{args}... };
+        Print_Impl(messages);
+    }
+
+
+    template <typename... TArgs>
+    void Console::PrintLine(TArgs const&... args)
+    {
+        CstrView const messages[]{ CstrView{args}..., CstrView{"\n"} };
+        Print_Impl(messages);
+    }
+
+
+    template <typename... TArgs>
+    void Console::Error(TArgs const&... args)
+    {
+        CstrView const messages[]{ CstrView{args}... };
+        Error_Impl(messages);
+    }
+
+
+    template <typename... TArgs>
+    void Console::ErrorLine(TArgs const&... args)
+    {
+        CstrView const messages[]{ CstrView{args}..., CstrView{"\n"} };
+        Error_Impl(messages);
+    }
+
+
+    void Console::Print_Impl(Span<const CstrView> const& messages)
+    {
+        SpinLockScope_t const lockScope{ GLock };
+
+        if (!GInitialized)
+            Process::ExitFailure();
+
+        for (auto i = size_t{}; i < messages.GetSize(); i++)
+        {
+            auto const& message = messages[i];
+            auto written = uint32_t{};
+
+            if (!WinApi::WriteFile(GPrintHandle, message, StrLen(message), &written, nullptr))
+                Process::ExitFailure();
+        }
+    }
+
+
+    void Console::Error_Impl(Span<const CstrView> const& messages)
+    {
+        SpinLockScope_t const lockScope{ GLock };
+
+        if (!GInitialized)
+            Process::ExitFailure();
+
+        for (auto i = size_t{}; i < messages.GetSize(); i++)
+        {
+            auto const& message = messages[i];
+            auto written = uint32_t{};
+
+            if (!WinApi::WriteFile(GErrorHandle, message, StrLen(message), &written, nullptr))
+                Process::ExitFailure();
+        }
+    }
+
+
+    SpinLock Console::GLock;
+    bool Console::GInitialized = false;
+    WinApi::HANDLE Console::GPrintHandle = nullptr;
+    WinApi::HANDLE Console::GErrorHandle = nullptr;
 }
