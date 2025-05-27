@@ -247,8 +247,10 @@ extern "C" { namespace Aiva::WinApi
     using UINT = uint32_t;
     using BOOL = sint32_t;
     using HANDLE = void*;
+    using LPVOID = void*;
     using LPCVOID = void const*;
     using LPDWORD = DWORD*;
+    using SIZE_T = size_t;
     using LONG_PTR = sintptr_t;
 
     // Structures
@@ -265,12 +267,19 @@ extern "C" { namespace Aiva::WinApi
 
     // Process Management
 
-    [[noreturn]] __attribute__((dllimport, stdcall)) void ExitProcess(UINT const uExitCode);
+    [[noreturn]] __attribute__((dllimport, stdcall)) void ExitProcess(UINT uExitCode);
 
     // File Management
 
     __attribute__((dllimport, stdcall)) HANDLE GetStdHandle(DWORD nStdHandle);
     __attribute__((dllimport, stdcall)) BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
+
+    // Heap Management
+
+    __attribute__((dllimport, stdcall)) HANDLE HeapCreate(DWORD flOptions, SIZE_T dwInitialSize, SIZE_T dwMaximumSize);
+    __attribute__((dllimport, stdcall)) BOOL HeapDestroy(HANDLE hHeap);
+    __attribute__((dllimport, stdcall)) LPVOID HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
+    __attribute__((dllimport, stdcall)) BOOL HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
 }}
 
 
@@ -485,6 +494,10 @@ namespace Aiva
         size_t m_size;
         TType* m_data;
     };
+
+
+    template <typename TDst, typename TSrc>
+    constexpr Span<TDst> CastSpan(Span<TSrc> const& span);
 }
 
 
@@ -598,6 +611,27 @@ namespace Aiva
     constexpr TType* Span<TType>::GetDataPtr() const
     {
         return m_data;
+    }
+
+
+    template <typename TDst, typename TSrc>
+    constexpr Span<TDst> CastSpan(Span<TSrc> const& span)
+    {
+        if (!span)
+            return Span<TDst>{};
+
+        auto const bytesCount = sizeof(TSrc) * span.GetSize();
+        if (bytesCount % sizeof(TDst))
+            return Span<TDst>{};
+
+        auto const dataAddr = reinterpret_cast<uintptr_t>(span.GetDataPtr());
+        if (dataAddr % alignof(TDst))
+            return Span<TDst>{};
+
+        auto& data = reinterpret_cast<TDst&>(span.GetDataRef());
+        auto const size = bytesCount / sizeof(TDst);
+
+        return Span<TDst>{ size, data };
     }
 }
 
@@ -970,7 +1004,6 @@ namespace Aiva
     void Console::Print_Impl(Span<const CstrView> const& messages)
     {
         SpinLockScope_t const lockScope{ GLock };
-
         if (!GInitialized)
             Process::ExitFailure();
 
@@ -988,7 +1021,6 @@ namespace Aiva
     void Console::Error_Impl(Span<const CstrView> const& messages)
     {
         SpinLockScope_t const lockScope{ GLock };
-
         if (!GInitialized)
             Process::ExitFailure();
 
@@ -1007,4 +1039,320 @@ namespace Aiva
     bool Console::GInitialized = false;
     WinApi::HANDLE Console::GPrintHandle = nullptr;
     WinApi::HANDLE Console::GErrorHandle = nullptr;
+}
+
+
+// ------------------------------------
+// "ensures.hpp"
+
+
+#define CheckNoEntry_Stringify(x) #x
+#define CheckNoEntry_ToString(x) CheckNoEntry_Stringify(x)
+#define CheckNoEntry_GetCodeLine() CheckNoEntry_ToString(__LINE__)
+
+
+#define CheckNoEntry() \
+{ \
+    Aiva::Console::ErrorLine(__FILE__, "(", CheckNoEntry_GetCodeLine(), "): ", __func__, ": NO_ENTRY_POINT."); \
+    Aiva::Process::ExitFailure(); \
+} \
+
+
+// ------------------------------------
+// "delete.hpp
+
+
+void operator delete(void *const ptr, size_t const size);
+
+
+// ------------------------------------
+// "delete.inl
+
+
+void operator delete(void *const, size_t const)
+{
+    CheckNoEntry();
+}
+
+
+// ------------------------------------
+// "i_allocator.hpp"
+
+
+namespace Aiva
+{
+    class IAllocator
+    {
+    public:
+        virtual Span<byte_t> Alloc(size_t const size) const;
+        virtual nullptr_t Free(Span<byte_t> const& span) const;
+
+        // ------------------
+
+        template <typename TType>
+        Span<TType> AllocArray(size_t const size) const;
+
+        template <typename TType>
+        nullptr_t FreeArray(Span<TType> const& span) const;
+
+        // ------------------
+
+        template <typename TType, typename... TArgs>
+        TType& Create(TArgs&&... args) const;
+
+        template <typename TType, typename... TArgs>
+        Span<TType> CreateArray(size_t const size, TArgs&&... args) const;
+
+        template <typename TType>
+        nullptr_t Delete(TType& data) const;
+
+        template <typename TType>
+        nullptr_t DeleteArray(Span<TType> const& data) const;
+
+    protected:
+        virtual ~IAllocator() = default;
+    };
+}
+
+
+// ------------------------------------
+// "i_allocator.inl"
+
+
+namespace Aiva
+{
+    Span<byte_t> IAllocator::Alloc(size_t const) const
+    {
+        CheckNoEntry();
+    }
+
+
+    nullptr_t IAllocator::Free(Span<byte_t> const&) const
+    {
+        CheckNoEntry();
+    }
+
+
+    template <typename TType>
+    Span<TType> IAllocator::AllocArray(size_t const size) const
+    {
+        auto const spanOfBytes = Alloc(sizeof(TType) * size);
+        if (!spanOfBytes)
+            CheckNoEntry();
+
+        auto const spanOfObjects = CastSpan<TType>(spanOfBytes);
+        if (!spanOfObjects)
+            CheckNoEntry();
+
+        return spanOfObjects;
+    }
+
+
+    template <typename TType>
+    nullptr_t IAllocator::FreeArray(Span<TType> const& span) const
+    {
+        auto const spanOfObjects = span;
+        if (!spanOfObjects)
+            CheckNoEntry();
+
+        auto const spanOfBytes = CastSpan<byte_t>(spanOfObjects);
+        if (!spanOfBytes)
+            CheckNoEntry();
+
+        return Free(spanOfBytes);
+    }
+
+
+    template <typename TType, typename... TArgs>
+    TType& IAllocator::Create(TArgs&&... args) const
+    {
+        auto const spanOfBytes = Alloc(sizeof(TType));
+        if (!spanOfBytes)
+            CheckNoEntry();
+
+        auto const spanOfObject = CastSpan<TType>(spanOfBytes);
+        if (!spanOfObject)
+            CheckNoEntry();
+
+        auto& object = spanOfObject.GetDataRef();
+        new (&object) TType{ Templates::Forward<TArgs>(args)... };
+
+        return object;
+    }
+
+
+    template <typename TType, typename... TArgs>
+    Span<TType> IAllocator::CreateArray(size_t const size, TArgs&&... args) const
+    {
+        auto const spanOfBytes = Alloc(sizeof(TType) * size);
+        if (!spanOfBytes)
+            CheckNoEntry();
+
+        auto const spanOfObjects = CastSpan<TType>(spanOfBytes);
+        if (!spanOfObjects)
+            CheckNoEntry();
+
+        for (auto i = size_t{}; i < spanOfObjects.GetSize(); i++)
+        {
+            auto& object = spanOfObjects[i];
+            new (&object) TType{ Templates::Forward<TArgs>(args)... };
+        }
+
+        return spanOfObjects;
+    }
+
+
+    template <typename TType>
+    nullptr_t IAllocator::Delete(TType& data) const
+    {
+        auto const spanOfObject = Span{ data };
+        if (!spanOfObject)
+            CheckNoEntry();
+
+        auto const spanOfBytes = CastSpan<byte_t>(spanOfObject);
+        if (!spanOfBytes)
+            CheckNoEntry();
+
+        data.~TType();
+        return Free(spanOfBytes);
+    }
+
+
+    template <typename TType>
+    nullptr_t IAllocator::DeleteArray(Span<TType> const& data) const
+    {
+        for (auto i = data.GetSize(); i > size_t{}; i--)
+        {
+            auto& object = data[i - 1];
+            object.~TType();
+        }
+
+        auto const spanOfBytes = CastSpan<byte_t>(data);
+        if (!spanOfBytes)
+            CheckNoEntry();
+
+        return Free(spanOfBytes);
+    }
+}
+
+
+// ------------------------------------
+// "memory.hpp"
+
+
+namespace Aiva
+{
+    class Memory final
+    {
+    public:
+        static void InitSystem();
+        static void ShutSystem();
+
+        static IAllocator const& GetHeapAlloc();
+
+    private:
+        class HeapAlloc final : public NonCopyable, public IAllocator
+        {
+        public:
+            HeapAlloc();
+            ~HeapAlloc() override;
+
+            Span<byte_t> Alloc(size_t const size) const override;
+            nullptr_t Free(Span<byte_t> const& span) const override;
+
+        private:
+            WinApi::HANDLE m_heap;
+        };
+
+        Memory() = delete;
+
+        static SpinLock GLock;
+        static bool GInitialized;
+        static ManageObject<HeapAlloc> GHeapAlloc;
+    };
+}
+
+
+// ------------------------------------
+// "memory.inl"
+
+
+namespace Aiva
+{
+    Memory::HeapAlloc::HeapAlloc()
+    {
+        m_heap = WinApi::HeapCreate(WinApi::DWORD{}, WinApi::SIZE_T{}, WinApi::SIZE_T{});
+        if (!m_heap)
+            CheckNoEntry();
+    }
+
+
+    Memory::HeapAlloc::~HeapAlloc()
+    {
+        if (!WinApi::HeapDestroy(m_heap))
+            CheckNoEntry();
+        m_heap = nullptr;
+    }
+
+
+    Span<byte_t> Memory::HeapAlloc::Alloc(size_t const size) const
+    {
+        if (size <= size_t{})
+            CheckNoEntry();
+
+        auto const data = WinApi::HeapAlloc(m_heap, WinApi::DWORD{}, size);
+        if (!data)
+            CheckNoEntry();
+
+        return Span<byte_t>{ size, (byte_t*)data };
+    }
+
+
+    nullptr_t Memory::HeapAlloc::Free(Span<byte_t> const& span) const
+    {
+        if (!span)
+            CheckNoEntry();
+
+        if (!WinApi::HeapFree(m_heap, WinApi::DWORD{}, span.GetDataPtr()))
+            CheckNoEntry();
+
+        return nullptr;
+    }
+
+
+    void Memory::InitSystem()
+    {
+        SpinLockScope_t const lockScope{ GLock };
+        if (GInitialized)
+            CheckNoEntry();
+
+        GHeapAlloc.Construct();
+        GInitialized = true;
+    }
+
+
+    void Memory::ShutSystem()
+    {
+        SpinLockScope_t const lockScope{ GLock };
+        if (!GInitialized)
+            CheckNoEntry();
+
+        GHeapAlloc.Destruct();
+        GInitialized = false;
+    }
+
+
+    IAllocator const& Memory::GetHeapAlloc()
+    {
+        SpinLockScope_t const lockScope{ GLock };
+        if (!GInitialized)
+            CheckNoEntry();
+
+        return GHeapAlloc.GetObjectRef();
+    }
+
+
+    SpinLock Memory::GLock;
+    bool Memory::GInitialized = false;
+    ManageObject<Memory::HeapAlloc> Memory::GHeapAlloc;
 }
