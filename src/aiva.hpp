@@ -13,12 +13,39 @@ namespace Aiva::Templates
 
 
     template <typename TType>
+    struct TypeIdentity { using Type_t = TType; };
+
+
+    template <typename TType>
+    using TypeIdentity_t = typename TypeIdentity<TType>::Type_t;
+
+
+    template <typename TType>
+    struct RemoveReference : public TypeIdentity<TType> {};
+
+
+    template <typename TType>
+    struct RemoveReference<TType&> : public TypeIdentity<TType> {};
+
+
+    template <typename TType>
+    struct RemoveReference<TType&&> : public TypeIdentity<TType> {};
+
+
+    template <typename TType>
+    using RemoveReference_t = typename RemoveReference<TType>::Type_t;
+
+
+    template <typename TType>
     constexpr TType&& Forward(TType& value);
 
 
     template <typename TType>
     constexpr TType&& Forward(TType&& value);
 
+
+    template <typename TType>
+    constexpr RemoveReference_t<TType>&& Move(TType&& value);
 }
 
 
@@ -39,6 +66,13 @@ namespace Aiva::Templates
     constexpr TType&& Forward(TType&& value)
     {
         return static_cast<TType&&>(value);
+    }
+
+
+    template <typename TType>
+    constexpr RemoveReference_t<TType>&& Move(TType&& value)
+    {
+        return static_cast<RemoveReference_t<TType>&&>(value);
     }
 }
 
@@ -1355,4 +1389,163 @@ namespace Aiva
     SpinLock Memory::GLock;
     bool Memory::GInitialized = false;
     ManageObject<Memory::HeapAlloc> Memory::GHeapAlloc;
+}
+
+
+// ------------------------------------
+// "linked_list.hpp"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    class LinkedList final : public NonCopyable
+    {
+    public:
+        LinkedList() = default;
+        ~LinkedList();
+
+        bool IsEmpty() const;
+        void PushBack(TType const& data);
+        void PushBack(TType&& data);
+        TType PopFront();
+
+    public:
+        template <typename TCond>
+        TType PopFirst(TCond const& condition);
+
+    private:
+        struct Node final
+        {
+            TType m_data = TType{};
+            Node* m_next = nullptr;
+        };
+
+        Node* m_head = nullptr;
+        Node* m_tail = nullptr;
+    };
+}
+
+
+// ------------------------------------
+// "linked_list.inl"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    LinkedList<TType>::~LinkedList()
+    {
+        auto node = m_head;
+
+        while (node)
+        {
+            auto const next = node->m_next;
+            Memory::GetHeapAlloc().Delete(*node);
+
+            node = next;
+        }
+    }
+
+
+    template <typename TType>
+    bool LinkedList<TType>::IsEmpty() const
+    {
+        return !m_head;
+    }
+
+
+    template <typename TType>
+    void LinkedList<TType>::PushBack(TType const& data)
+    {
+        auto const node = &Memory::GetHeapAlloc().Create<Node>(data);
+
+        if (!m_head)
+        {
+            m_head = node;
+            m_tail = node;
+        }
+        else
+        {
+            m_tail->m_next = node;
+            m_tail = node;
+        }
+    }
+
+
+    template <typename TType>
+    void LinkedList<TType>::PushBack(TType&& data)
+    {
+        auto const node = &Memory::GetHeapAlloc().Create<Node>(Templates::Move(data));
+
+        if (!m_head)
+        {
+            m_head = node;
+            m_tail = node;
+        }
+        else
+        {
+            m_tail->m_next = node;
+            m_tail = node;
+        }
+    }
+
+
+    template <typename TType>
+    TType LinkedList<TType>::PopFront()
+    {
+        if (!m_head)
+            return TType{};
+
+        auto const data = Templates::Move(m_head->m_data);
+
+        if (m_head == m_tail)
+        {
+            Memory::GetHeapAlloc().Delete(*m_head);
+
+            m_head = nullptr;
+            m_tail = nullptr;
+        }
+        else
+        {
+            auto const head = m_head->m_next;
+            Memory::GetHeapAlloc().Delete(*m_head);
+
+            m_head = head;
+        }
+
+        return data;
+    }
+
+
+    template <typename TType>
+    template <typename TCond>
+    TType LinkedList<TType>::PopFirst(TCond const& condition)
+    {
+        auto prevNode = (Node*)nullptr;
+        auto currNode = m_head;
+
+        while (currNode && !condition((TType const&)currNode->m_data))
+        {
+            prevNode = currNode;
+            currNode = currNode->m_next;
+        }
+
+        if (!currNode)
+            return TType{};
+
+        auto const data = Templates::Move(currNode->m_data);
+
+        if (prevNode)
+            prevNode->m_next = currNode->m_next;
+
+        if (currNode == m_head)
+            m_head = currNode->m_next;
+
+        if (currNode == m_tail)
+            m_tail = prevNode;
+
+        Memory::GetHeapAlloc().Delete(*currNode);
+        return data;
+    }
 }
