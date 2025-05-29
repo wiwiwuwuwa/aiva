@@ -1549,3 +1549,55 @@ namespace Aiva
         return data;
     }
 }
+
+
+// ------------------------------------
+// "coroutines.hpp"
+
+
+namespace Aiva
+{
+    class Coroutines final
+    {
+    public:
+        static void InitSystem();
+        static void ShutSystem();
+
+    private:
+        Coroutines() = delete;
+
+        static SpinLock GLock;
+        static bool GInitialized;
+    };
+}
+
+
+// ------------------------------------
+// "coroutines.inl"
+
+
+namespace Aiva
+{
+    void Coroutines::InitSystem()
+    {
+        SpinLockScope_t const lockScope{ GLock };
+        if (GInitialized)
+            CheckNoEntry();
+
+        GInitialized = true;
+    }
+
+
+    void Coroutines::ShutSystem()
+    {
+        SpinLockScope_t const lockScope{ GLock };
+        if (!GInitialized)
+            CheckNoEntry();
+
+        GInitialized = false;
+    }
+
+
+    SpinLock Coroutines::GLock;
+    bool Coroutines::GInitialized = false;
+}
