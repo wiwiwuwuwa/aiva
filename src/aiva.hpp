@@ -287,6 +287,8 @@ extern "C" { namespace Aiva::WinApi
     using SIZE_T = size_t;
     using LONG_PTR = sintptr_t;
 
+    using LPFIBER_START_ROUTINE = void (__attribute__((stdcall))*)(LPVOID);
+
     // Structures
 
     struct OVERLAPPED;
@@ -314,6 +316,11 @@ extern "C" { namespace Aiva::WinApi
     __attribute__((dllimport, stdcall)) BOOL HeapDestroy(HANDLE hHeap);
     __attribute__((dllimport, stdcall)) LPVOID HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
     __attribute__((dllimport, stdcall)) BOOL HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
+
+    // Fiber Management
+
+    __attribute__((dllimport, stdcall)) BOOL IsThreadAFiber();
+    __attribute__((dllimport, stdcall)) LPVOID CreateFiber(SIZE_T dwStackSize, LPFIBER_START_ROUTINE lpStartAddress, LPVOID lpParameter);
 }}
 
 
@@ -1564,6 +1571,28 @@ namespace Aiva
         static void ShutSystem();
 
     private:
+        static auto constexpr kAnyWorkerMask = (uintptr_t)(-1);
+
+        class ACoroutine
+        {
+        public:
+            WinApi::LPVOID GetOrCreateNativeHandle();
+
+            uintptr_t GetWorkerMask() const;
+            void SetWorkerMask(uintptr_t const workerMask);
+
+            virtual ~ACoroutine() = default;
+
+        protected:
+            virtual void Execute() const = 0;
+
+        private:
+            __attribute__((stdcall)) static void NativeAction(WinApi::LPVOID lpFiberParameter);
+
+            WinApi::LPVOID m_nativeHandle = nullptr;
+            uintptr_t m_workerMask = kAnyWorkerMask;
+        };
+
         Coroutines() = delete;
 
         static SpinLock GLock;
@@ -1595,6 +1624,44 @@ namespace Aiva
             CheckNoEntry();
 
         GInitialized = false;
+    }
+
+
+    WinApi::LPVOID Coroutines::ACoroutine::GetOrCreateNativeHandle()
+    {
+        if (m_nativeHandle)
+            return m_nativeHandle;
+
+        if (!WinApi::IsThreadAFiber())
+            CheckNoEntry();
+
+        m_nativeHandle = WinApi::CreateFiber(16384, NativeAction, this);
+        if (!m_nativeHandle)
+            CheckNoEntry();
+
+        return m_nativeHandle;
+    }
+
+
+    uintptr_t Coroutines::ACoroutine::GetWorkerMask() const
+    {
+        return m_workerMask;
+    }
+
+
+    void Coroutines::ACoroutine::SetWorkerMask(uintptr_t const workerMask)
+    {
+        m_workerMask = workerMask;
+    }
+
+
+    __attribute__((stdcall)) void Coroutines::ACoroutine::NativeAction(WinApi::LPVOID lpFiberParameter)
+    {
+        auto const coroutine = (ACoroutine*)lpFiberParameter;
+        if (!coroutine)
+            CheckNoEntry();
+
+        coroutine->Execute();
     }
 
 
