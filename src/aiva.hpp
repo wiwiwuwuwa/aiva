@@ -1593,6 +1593,17 @@ namespace Aiva
             uintptr_t m_workerMask = kAnyWorkerMask;
         };
 
+        class CoroutineQueue final
+        {
+        public:
+            void Enqueue(ACoroutine& coroutine);
+            ACoroutine* Dequeue(uintptr_t const workerMask);
+
+        private:
+            SpinLock m_lock;
+            LinkedList<ACoroutine*> m_data;
+        };
+
         Coroutines() = delete;
 
         static SpinLock GLock;
@@ -1662,6 +1673,20 @@ namespace Aiva
             CheckNoEntry();
 
         coroutine->Execute();
+    }
+
+
+    void Coroutines::CoroutineQueue::Enqueue(ACoroutine& coroutine)
+    {
+        SpinLockScope_t const lockScope{ m_lock };
+        m_data.PushBack(&coroutine);
+    }
+
+
+    Coroutines::ACoroutine* Coroutines::CoroutineQueue::Dequeue(uintptr_t const workerMask)
+    {
+        SpinLockScope_t const lockScope{ m_lock };
+        return m_data.PopFirst([&](auto const c) { return c && (c->GetWorkerMask() & workerMask) != uintptr_t{}; });
     }
 
 
