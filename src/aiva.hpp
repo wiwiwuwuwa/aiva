@@ -1601,7 +1601,7 @@ namespace Aiva
         static auto constexpr kAnyWorkerMask = (uintptr_t)(-1);
 
 
-        class ACoroutine
+        class ACoroutine : public NonCopyable
         {
         public:
             WinApi::LPVOID GetOrCreateNativeHandle();
