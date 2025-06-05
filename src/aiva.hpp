@@ -342,8 +342,8 @@ extern "C" { namespace Aiva::WinApi
 
     // Fiber Management
 
-    __attribute__((dllimport, stdcall)) BOOL IsThreadAFiber();
     __attribute__((dllimport, stdcall)) LPVOID ConvertThreadToFiber(LPVOID lpParameter);
+    __attribute__((dllimport, stdcall)) BOOL IsThreadAFiber();
     __attribute__((dllimport, stdcall)) BOOL ConvertFiberToThread(void);
     __attribute__((dllimport, stdcall)) LPVOID CreateFiber(SIZE_T dwStackSize, LPFIBER_START_ROUTINE lpStartAddress, LPVOID lpParameter);
     __attribute__((dllimport, stdcall)) void SwitchToFiber(LPVOID lpFiber);
