@@ -287,9 +287,19 @@ extern "C" { namespace Aiva::WinApi
     using SIZE_T = size_t;
     using LONG_PTR = sintptr_t;
 
+    using LPTHREAD_START_ROUTINE = DWORD(__attribute__((stdcall))*)(LPVOID);
     using LPFIBER_START_ROUTINE = void (__attribute__((stdcall))*)(LPVOID);
 
     // Structures
+
+    struct SECURITY_ATTRIBUTES final
+    {
+        DWORD nLength;
+        LPVOID lpSecurityDescriptor;
+        BOOL bInheritHandle;
+    };
+    using LPSECURITY_ATTRIBUTES = SECURITY_ATTRIBUTES*;
+
 
     struct OVERLAPPED;
     using LPOVERLAPPED = OVERLAPPED*;
@@ -300,6 +310,9 @@ extern "C" { namespace Aiva::WinApi
     static auto const STD_INPUT_HANDLE = (DWORD)(-10);
     static auto const STD_OUTPUT_HANDLE = (DWORD)(-11);
     static auto const STD_ERROR_HANDLE = (DWORD)(-12);
+    static auto const INFINITE = (DWORD)(-1);
+    static auto const TLS_OUT_OF_INDEXES = (DWORD)(-1);
+    static auto const WAIT_FAILED = (DWORD)(-1);
 
     // Process Management
 
@@ -317,10 +330,24 @@ extern "C" { namespace Aiva::WinApi
     __attribute__((dllimport, stdcall)) LPVOID HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
     __attribute__((dllimport, stdcall)) BOOL HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
 
+    // Thread Management
+
+    __attribute__((dllimport, stdcall)) HANDLE CreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
+    __attribute__((dllimport, stdcall)) BOOL CloseHandle(HANDLE hObject);
+    __attribute__((dllimport, stdcall)) DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
+
+    // Thread Local Storage (TLS)
+
+    __attribute__((dllimport, stdcall)) BOOL TlsSetValue(DWORD dwTlsIndex, LPVOID lpTlsValue);
+
     // Fiber Management
 
     __attribute__((dllimport, stdcall)) BOOL IsThreadAFiber();
+    __attribute__((dllimport, stdcall)) LPVOID ConvertThreadToFiber(LPVOID lpParameter);
+    __attribute__((dllimport, stdcall)) BOOL ConvertFiberToThread(void);
     __attribute__((dllimport, stdcall)) LPVOID CreateFiber(SIZE_T dwStackSize, LPFIBER_START_ROUTINE lpStartAddress, LPVOID lpParameter);
+    __attribute__((dllimport, stdcall)) void SwitchToFiber(LPVOID lpFiber);
+    __attribute__((dllimport, stdcall)) void DeleteFiber(LPVOID lpFiber);
 }}
 
 
@@ -1573,6 +1600,7 @@ namespace Aiva
     private:
         static auto constexpr kAnyWorkerMask = (uintptr_t)(-1);
 
+
         class ACoroutine
         {
         public:
@@ -1581,10 +1609,10 @@ namespace Aiva
             uintptr_t GetWorkerMask() const;
             void SetWorkerMask(uintptr_t const workerMask);
 
-            virtual ~ACoroutine() = default;
+            virtual ~ACoroutine();
 
         protected:
-            virtual void Execute() const = 0;
+            virtual void Execute() const;
 
         private:
             __attribute__((stdcall)) static void NativeAction(WinApi::LPVOID lpFiberParameter);
@@ -1593,7 +1621,8 @@ namespace Aiva
             uintptr_t m_workerMask = kAnyWorkerMask;
         };
 
-        class CoroutineQueue final
+
+        class CoroutineQueue final : public NonCopyable
         {
         public:
             void Enqueue(ACoroutine& coroutine);
@@ -1603,6 +1632,24 @@ namespace Aiva
             SpinLock m_lock;
             LinkedList<ACoroutine*> m_data;
         };
+
+
+        class WorkerThread final : public NonCopyable
+        {
+        public:
+            WorkerThread(uintptr_t const workerMask, CoroutineQueue& coroutineQueue);
+            ~WorkerThread();
+
+        private:
+            __attribute__((stdcall)) static WinApi::DWORD NativeAction(WinApi::LPVOID lpParameter);
+
+            uintptr_t m_workerMask;
+            CoroutineQueue& m_coroutineQueue;
+            WinApi::HANDLE m_nativeThreadHandle;
+            WinApi::LPVOID m_nativeFiberHandle;
+            volatile uintptr_t m_stopFlag;
+        };
+
 
         Coroutines() = delete;
 
@@ -1666,6 +1713,19 @@ namespace Aiva
     }
 
 
+    Coroutines::ACoroutine::~ACoroutine()
+    {
+        if (m_nativeHandle)
+            WinApi::DeleteFiber(m_nativeHandle);
+    }
+
+
+    void Coroutines::ACoroutine::Execute() const
+    {
+        CheckNoEntry();
+    }
+
+
     __attribute__((stdcall)) void Coroutines::ACoroutine::NativeAction(WinApi::LPVOID lpFiberParameter)
     {
         auto const coroutine = (ACoroutine*)lpFiberParameter;
@@ -1687,6 +1747,74 @@ namespace Aiva
     {
         SpinLockScope_t const lockScope{ m_lock };
         return m_data.PopFirst([&](auto const c) { return c && (c->GetWorkerMask() & workerMask) != uintptr_t{}; });
+    }
+
+
+    Coroutines::WorkerThread::WorkerThread(uintptr_t const workerMask, CoroutineQueue& coroutineQueue)
+        : m_workerMask{ workerMask }, m_coroutineQueue{ coroutineQueue }, m_stopFlag{ false }
+    {
+        if (!workerMask)
+            CheckNoEntry();
+
+        m_nativeThreadHandle = WinApi::CreateThread(nullptr, 16384, NativeAction, this, 0u, nullptr);
+        if (!m_nativeThreadHandle)
+            CheckNoEntry();
+    }
+
+
+    Coroutines::WorkerThread::~WorkerThread()
+    {
+        Intrin::AtomicExchange(&m_stopFlag, true);
+
+        if (WinApi::WaitForSingleObject(m_nativeThreadHandle, WinApi::INFINITE) == WinApi::WAIT_FAILED)
+            CheckNoEntry();
+
+        if (!WinApi::CloseHandle(m_nativeThreadHandle))
+            CheckNoEntry();
+    }
+
+
+    __attribute__((stdcall)) WinApi::DWORD Coroutines::WorkerThread::NativeAction(WinApi::LPVOID lpParameter)
+    {
+        auto const self = (WorkerThread*)lpParameter;
+        if (!self)
+            CheckNoEntry();
+
+        self->m_nativeFiberHandle = WinApi::ConvertThreadToFiber(nullptr);
+        if (!self->m_nativeFiberHandle)
+            CheckNoEntry();
+
+        while (Intrin::AtomicCompareExchange(&self->m_stopFlag, false, false) == false)
+        {
+            auto const coroutine = self->m_coroutineQueue.Dequeue(self->m_workerMask);
+            if (!coroutine)
+            {
+                Intrin::YieldProcessor();
+                continue;
+            }
+
+            auto const nativeFiberHandle = coroutine->GetOrCreateNativeHandle();
+            if (!nativeFiberHandle)
+                CheckNoEntry();
+
+            // we are now in the worker thread fiber
+            WinApi::SwitchToFiber(nativeFiberHandle); // switch to the coroutine fiber
+            // we are now in the worker thread fiber
+
+            if (!coroutine->GetWorkerMask())
+            {
+                Memory::GetHeapAlloc().Delete(*coroutine);
+                continue;
+            }
+
+            self->m_coroutineQueue.Enqueue(*coroutine);
+        }
+
+        if (!WinApi::ConvertFiberToThread())
+            CheckNoEntry();
+        self->m_nativeFiberHandle = nullptr;
+
+        return 0u;
     }
 
 
