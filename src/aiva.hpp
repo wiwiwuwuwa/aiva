@@ -1594,8 +1594,22 @@ namespace Aiva
     class Coroutines final
     {
     public:
+        class ICoroutineControl
+        {
+        public:
+            virtual void Yield() const { CheckNoEntry(); }
+            virtual void YieldOnTheCurrentWorker() const { CheckNoEntry(); }
+            virtual void Close() const { CheckNoEntry(); }
+
+            virtual ~ICoroutineControl() = default;
+        };
+
+
         static void InitSystem();
         static void ShutSystem();
+
+        template <typename TAction>
+        static void Spawn(TAction&& action);
 
     private:
         static auto constexpr kAnyWorkerMask = (uintptr_t)(-1);
@@ -1604,21 +1618,39 @@ namespace Aiva
         class ACoroutine : public NonCopyable
         {
         public:
-            WinApi::LPVOID GetOrCreateNativeHandle();
-
             uintptr_t GetWorkerMask() const;
             void SetWorkerMask(uintptr_t const workerMask);
+
+            WinApi::LPVOID GetParentFiberHandle();
+            void SetParentFiberHandle(WinApi::LPVOID const fiberHandle);
+
+            WinApi::LPVOID GetOrCreateFiberHandle();
 
             virtual ~ACoroutine();
 
         protected:
-            virtual void Execute() const;
+            virtual void Execute(ICoroutineControl const&) const { CheckNoEntry(); }
 
         private:
             __attribute__((stdcall)) static void NativeAction(WinApi::LPVOID lpFiberParameter);
 
-            WinApi::LPVOID m_nativeHandle = nullptr;
             uintptr_t m_workerMask = kAnyWorkerMask;
+            WinApi::LPVOID m_parentFiberHandle = nullptr;
+            WinApi::LPVOID m_fiberHandle = nullptr;
+        };
+
+
+        class CoroutineContol final : public NonCopyable, public ICoroutineControl
+        {
+        public:
+            CoroutineContol(ACoroutine& coroutine);
+
+            void Yield() const override;
+            void YieldOnTheCurrentWorker() const override;
+            void Close() const override;
+
+        private:
+            ACoroutine& m_coroutine;
         };
 
 
@@ -1645,8 +1677,8 @@ namespace Aiva
 
             uintptr_t m_workerMask;
             CoroutineQueue& m_coroutineQueue;
-            WinApi::HANDLE m_nativeThreadHandle;
-            WinApi::LPVOID m_nativeFiberHandle;
+            WinApi::HANDLE m_threadHandle;
+            WinApi::LPVOID m_fiberHandle;
             volatile uintptr_t m_stopFlag;
         };
 
@@ -1655,6 +1687,8 @@ namespace Aiva
 
         static SpinLock GLock;
         static bool GInitialized;
+        static ManageObject<CoroutineQueue> GCoroutineQueue;
+        static ManageObject<WorkerThread> GWorkerThread;
     };
 }
 
@@ -1671,6 +1705,9 @@ namespace Aiva
         if (GInitialized)
             CheckNoEntry();
 
+        GCoroutineQueue.Construct();
+        GWorkerThread.Construct(kAnyWorkerMask, *GCoroutineQueue);
+
         GInitialized = true;
     }
 
@@ -1681,23 +1718,34 @@ namespace Aiva
         if (!GInitialized)
             CheckNoEntry();
 
+        GWorkerThread.Destruct();
+        GCoroutineQueue.Destruct();
+
         GInitialized = false;
     }
 
 
-    WinApi::LPVOID Coroutines::ACoroutine::GetOrCreateNativeHandle()
+    template <typename TAction>
+    void Coroutines::Spawn(TAction&& action)
     {
-        if (m_nativeHandle)
-            return m_nativeHandle;
+        class Coroutine final : public ACoroutine
+        {
+        public:
+            Coroutine(TAction&& action) : m_action{ Templates::Move(action) } {}
+        protected:
+            void Execute(ICoroutineControl const& coroutineControl) const override { m_action(coroutineControl); }
+        private:
+            TAction m_action;
+        };
 
-        if (!WinApi::IsThreadAFiber())
+
+        auto& coroutine = Memory::GetHeapAlloc().Create<Coroutine>(Templates::Move(action));
+
+        SpinLockScope_t const lockScope{ GLock };
+        if (!GInitialized)
             CheckNoEntry();
 
-        m_nativeHandle = WinApi::CreateFiber(16384, NativeAction, this);
-        if (!m_nativeHandle)
-            CheckNoEntry();
-
-        return m_nativeHandle;
+        GCoroutineQueue->Enqueue(coroutine);
     }
 
 
@@ -1713,16 +1761,38 @@ namespace Aiva
     }
 
 
-    Coroutines::ACoroutine::~ACoroutine()
+    WinApi::LPVOID Coroutines::ACoroutine::GetParentFiberHandle()
     {
-        if (m_nativeHandle)
-            WinApi::DeleteFiber(m_nativeHandle);
+        return m_parentFiberHandle;
     }
 
 
-    void Coroutines::ACoroutine::Execute() const
+    void Coroutines::ACoroutine::SetParentFiberHandle(WinApi::LPVOID const fiberHandle)
     {
-        CheckNoEntry();
+        m_parentFiberHandle = fiberHandle;
+    }
+
+
+    WinApi::LPVOID Coroutines::ACoroutine::GetOrCreateFiberHandle()
+    {
+        if (m_fiberHandle)
+            return m_fiberHandle;
+
+        if (!WinApi::IsThreadAFiber())
+            CheckNoEntry();
+
+        m_fiberHandle = WinApi::CreateFiber(16384, NativeAction, this);
+        if (!m_fiberHandle)
+            CheckNoEntry();
+
+        return m_fiberHandle;
+    }
+
+
+    Coroutines::ACoroutine::~ACoroutine()
+    {
+        if (m_fiberHandle)
+            WinApi::DeleteFiber(m_fiberHandle);
     }
 
 
@@ -1732,7 +1802,54 @@ namespace Aiva
         if (!coroutine)
             CheckNoEntry();
 
-        coroutine->Execute();
+        CoroutineContol const coroutineContol{ *coroutine };
+
+        coroutine->Execute(coroutineContol);
+        coroutineContol.Close();
+    }
+
+
+    Coroutines::CoroutineContol::CoroutineContol(ACoroutine& coroutine)
+        : m_coroutine{ coroutine }
+    {
+        //
+    }
+
+
+    void Coroutines::CoroutineContol::Yield() const
+    {
+        m_coroutine.SetWorkerMask(kAnyWorkerMask);
+
+        auto const parentFiberHandle = m_coroutine.GetParentFiberHandle();
+        if (!parentFiberHandle)
+            CheckNoEntry();
+
+        WinApi::SwitchToFiber(parentFiberHandle);
+    }
+
+
+    void Coroutines::CoroutineContol::YieldOnTheCurrentWorker() const
+    {
+        if (!m_coroutine.GetWorkerMask())
+            CheckNoEntry();
+
+        auto const parentFiberHandle = m_coroutine.GetParentFiberHandle();
+        if (!parentFiberHandle)
+            CheckNoEntry();
+
+        WinApi::SwitchToFiber(parentFiberHandle);
+    }
+
+
+    void Coroutines::CoroutineContol::Close() const
+    {
+        m_coroutine.SetWorkerMask(0u);
+
+        auto const parentFiberHandle = m_coroutine.GetParentFiberHandle();
+        if (!parentFiberHandle)
+            CheckNoEntry();
+
+        WinApi::SwitchToFiber(parentFiberHandle);
     }
 
 
@@ -1756,8 +1873,8 @@ namespace Aiva
         if (!workerMask)
             CheckNoEntry();
 
-        m_nativeThreadHandle = WinApi::CreateThread(nullptr, 16384, NativeAction, this, 0u, nullptr);
-        if (!m_nativeThreadHandle)
+        m_threadHandle = WinApi::CreateThread(nullptr, 16384, NativeAction, this, 0u, nullptr);
+        if (!m_threadHandle)
             CheckNoEntry();
     }
 
@@ -1766,10 +1883,10 @@ namespace Aiva
     {
         Intrin::AtomicExchange(&m_stopFlag, true);
 
-        if (WinApi::WaitForSingleObject(m_nativeThreadHandle, WinApi::INFINITE) == WinApi::WAIT_FAILED)
+        if (WinApi::WaitForSingleObject(m_threadHandle, WinApi::INFINITE) == WinApi::WAIT_FAILED)
             CheckNoEntry();
 
-        if (!WinApi::CloseHandle(m_nativeThreadHandle))
+        if (!WinApi::CloseHandle(m_threadHandle))
             CheckNoEntry();
     }
 
@@ -1780,8 +1897,8 @@ namespace Aiva
         if (!self)
             CheckNoEntry();
 
-        self->m_nativeFiberHandle = WinApi::ConvertThreadToFiber(nullptr);
-        if (!self->m_nativeFiberHandle)
+        self->m_fiberHandle = WinApi::ConvertThreadToFiber(nullptr);
+        if (!self->m_fiberHandle)
             CheckNoEntry();
 
         while (Intrin::AtomicCompareExchange(&self->m_stopFlag, false, false) == false)
@@ -1793,13 +1910,13 @@ namespace Aiva
                 continue;
             }
 
-            auto const nativeFiberHandle = coroutine->GetOrCreateNativeHandle();
-            if (!nativeFiberHandle)
+            auto const coroutineFiberHandle = coroutine->GetOrCreateFiberHandle();
+            if (!coroutineFiberHandle)
                 CheckNoEntry();
 
-            // we are now in the worker thread fiber
-            WinApi::SwitchToFiber(nativeFiberHandle); // switch to the coroutine fiber
-            // we are now in the worker thread fiber
+            coroutine->SetParentFiberHandle(self->m_fiberHandle);
+            WinApi::SwitchToFiber(coroutineFiberHandle);
+            coroutine->SetParentFiberHandle(nullptr);
 
             if (!coroutine->GetWorkerMask())
             {
@@ -1812,7 +1929,7 @@ namespace Aiva
 
         if (!WinApi::ConvertFiberToThread())
             CheckNoEntry();
-        self->m_nativeFiberHandle = nullptr;
+        self->m_fiberHandle = nullptr;
 
         return 0u;
     }
@@ -1820,4 +1937,6 @@ namespace Aiva
 
     SpinLock Coroutines::GLock;
     bool Coroutines::GInitialized = false;
+    ManageObject<Coroutines::CoroutineQueue> Coroutines::GCoroutineQueue;
+    ManageObject<Coroutines::WorkerThread> Coroutines::GWorkerThread;
 }
