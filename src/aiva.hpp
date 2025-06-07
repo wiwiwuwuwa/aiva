@@ -277,6 +277,7 @@ extern "C" { namespace Aiva::WinApi
 {
     // Base Types
 
+    using WORD = uint16_t;
     using DWORD = uint32_t;
     using UINT = uint32_t;
     using BOOL = sint32_t;
@@ -285,6 +286,7 @@ extern "C" { namespace Aiva::WinApi
     using LPCVOID = void const*;
     using LPDWORD = DWORD*;
     using SIZE_T = size_t;
+    using ULONG_PTR = uintptr_t;
     using LONG_PTR = sintptr_t;
 
     using LPTHREAD_START_ROUTINE = DWORD(__attribute__((stdcall))*)(LPVOID);
@@ -299,6 +301,30 @@ extern "C" { namespace Aiva::WinApi
         BOOL bInheritHandle;
     };
     using LPSECURITY_ATTRIBUTES = SECURITY_ATTRIBUTES*;
+
+
+    struct SYSTEM_INFO
+    {
+        union
+        {
+            DWORD dwOemId;
+            struct
+            {
+                WORD wProcessorArchitecture;
+                WORD wReserved;
+            } DUMMY;
+        } DUMMYUNION;
+        DWORD dwPageSize;
+        LPVOID lpMinimumApplicationAddress;
+        LPVOID lpMaximumApplicationAddress;
+        ULONG_PTR dwActiveProcessorMask;
+        DWORD dwNumberOfProcessors;
+        DWORD dwProcessorType;
+        DWORD dwAllocationGranularity;
+        WORD wProcessorLevel;
+        WORD wProcessorRevision;
+    };
+    using LPSYSTEM_INFO = SYSTEM_INFO*;
 
 
     struct OVERLAPPED;
@@ -336,9 +362,9 @@ extern "C" { namespace Aiva::WinApi
     __attribute__((dllimport, stdcall)) BOOL CloseHandle(HANDLE hObject);
     __attribute__((dllimport, stdcall)) DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
 
-    // Thread Local Storage (TLS)
+    // System Information
 
-    __attribute__((dllimport, stdcall)) BOOL TlsSetValue(DWORD dwTlsIndex, LPVOID lpTlsValue);
+    __attribute__((dllimport, stdcall)) void GetSystemInfo(LPSYSTEM_INFO lpSystemInfo);
 
     // Fiber Management
 
@@ -398,22 +424,80 @@ namespace Aiva::Intrin
 
 
 // ------------------------------------
-// "process.hpp"
+// "math.hpp"
 
 
-namespace Aiva::Process
+namespace Aiva::Math
 {
+    template <typename TType>
+    constexpr TType Min(TType const a, TType const b);
+
+
+    template <typename TType>
+    constexpr size_t CountOfBits();
+}
+
+
+// ------------------------------------
+// "math.inl"
+
+
+namespace Aiva::Math
+{
+    template <typename TType>
+    constexpr TType Min(TType const a, TType const b)
+    {
+        return a <= b ? a : b;
+    }
+
+
+    template <typename TType>
+    constexpr size_t CountOfBits()
+    {
+        using SameSizeUnsignedType_t = Templates::Number_t<Templates::NumberType::Int, Templates::NumberSign::None, Templates::GetNumberSize<TType>()>;
+
+        auto val = (SameSizeUnsignedType_t)(-1);
+        auto cnt = size_t{};
+
+        while (val)
+        {
+            val >>= 1;
+            cnt++;
+        }
+
+        return cnt;
+    }
+}
+
+
+// ------------------------------------
+// "system.hpp"
+
+
+namespace Aiva::System
+{
+    size_t GetNumberOfCores();
+
     [[noreturn]] void ExitSuccess();
     [[noreturn]] void ExitFailure();
 }
 
 
 // ------------------------------------
-// "process.inl"
+// "system.inl"
 
 
-namespace Aiva::Process
+namespace Aiva::System
 {
+    size_t GetNumberOfCores()
+    {
+        auto systemInfo = WinApi::SYSTEM_INFO{};
+        WinApi::GetSystemInfo(&systemInfo);
+
+        return Math::Min(Math::CountOfBits<uintptr_t>(), (size_t)systemInfo.dwNumberOfProcessors);
+    }
+
+
     [[noreturn]] void ExitSuccess()
     {
         WinApi::ExitProcess(0);
@@ -1012,15 +1096,15 @@ namespace Aiva
         SpinLockScope_t const lockScope{ GLock };
 
         if (GInitialized)
-            Process::ExitFailure();
+            System::ExitFailure();
 
         GPrintHandle = WinApi::GetStdHandle(WinApi::STD_OUTPUT_HANDLE);
         if (!GPrintHandle || GPrintHandle == WinApi::INVALID_HANDLE_VALUE)
-            Process::ExitFailure();
+            System::ExitFailure();
 
         GErrorHandle = WinApi::GetStdHandle(WinApi::STD_ERROR_HANDLE);
         if (!GErrorHandle || GErrorHandle == WinApi::INVALID_HANDLE_VALUE)
-            Process::ExitFailure();
+            System::ExitFailure();
 
         GInitialized = true;
     }
@@ -1031,7 +1115,7 @@ namespace Aiva
         SpinLockScope_t const lockScope{ GLock };
 
         if (!GInitialized)
-            Process::ExitFailure();
+            System::ExitFailure();
 
         GInitialized = false;
     }
@@ -1073,7 +1157,7 @@ namespace Aiva
     {
         SpinLockScope_t const lockScope{ GLock };
         if (!GInitialized)
-            Process::ExitFailure();
+            System::ExitFailure();
 
         for (auto i = size_t{}; i < messages.GetSize(); i++)
         {
@@ -1081,7 +1165,7 @@ namespace Aiva
             auto written = uint32_t{};
 
             if (!WinApi::WriteFile(GPrintHandle, message, StrLen(message), &written, nullptr))
-                Process::ExitFailure();
+                System::ExitFailure();
         }
     }
 
@@ -1090,7 +1174,7 @@ namespace Aiva
     {
         SpinLockScope_t const lockScope{ GLock };
         if (!GInitialized)
-            Process::ExitFailure();
+            System::ExitFailure();
 
         for (auto i = size_t{}; i < messages.GetSize(); i++)
         {
@@ -1098,7 +1182,7 @@ namespace Aiva
             auto written = uint32_t{};
 
             if (!WinApi::WriteFile(GErrorHandle, message, StrLen(message), &written, nullptr))
-                Process::ExitFailure();
+                System::ExitFailure();
         }
     }
 
@@ -1122,7 +1206,7 @@ namespace Aiva
 #define CheckNoEntry() \
 { \
     Aiva::Console::ErrorLine(__FILE__, "(", CheckNoEntry_GetCodeLine(), "): ", __func__, ": NO_ENTRY_POINT."); \
-    Aiva::Process::ExitFailure(); \
+    Aiva::System::ExitFailure(); \
 } \
 
 
@@ -1688,7 +1772,7 @@ namespace Aiva
         static SpinLock GLock;
         static bool GInitialized;
         static ManageObject<CoroutineQueue> GCoroutineQueue;
-        static ManageObject<WorkerThread> GWorkerThread;
+        static Span<WorkerThread> GWorkerThreads;
     };
 }
 
@@ -1706,7 +1790,10 @@ namespace Aiva
             CheckNoEntry();
 
         GCoroutineQueue.Construct();
-        GWorkerThread.Construct(kAnyWorkerMask, *GCoroutineQueue);
+
+        GWorkerThreads = Memory::GetHeapAlloc().AllocArray<WorkerThread>(System::GetNumberOfCores());
+        for (auto i = size_t{}; i < GWorkerThreads.GetSize(); i++)
+            new (&GWorkerThreads[i]) WorkerThread(1u << i, *GCoroutineQueue);
 
         GInitialized = true;
     }
@@ -1718,7 +1805,10 @@ namespace Aiva
         if (!GInitialized)
             CheckNoEntry();
 
-        GWorkerThread.Destruct();
+        for (auto i = GWorkerThreads.GetSize(); i > 0u; i--)
+            GWorkerThreads[i - 1u].~WorkerThread();
+        GWorkerThreads = Span<WorkerThread>{};
+
         GCoroutineQueue.Destruct();
 
         GInitialized = false;
@@ -1938,5 +2028,5 @@ namespace Aiva
     SpinLock Coroutines::GLock;
     bool Coroutines::GInitialized = false;
     ManageObject<Coroutines::CoroutineQueue> Coroutines::GCoroutineQueue;
-    ManageObject<Coroutines::WorkerThread> Coroutines::GWorkerThread;
+    Span<Coroutines::WorkerThread> Coroutines::GWorkerThreads;
 }

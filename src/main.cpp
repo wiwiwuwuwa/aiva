@@ -29,5 +29,5 @@ void Main()
     Aiva::Memory::ShutSystem();
     Aiva::Console::ShutSystem();
 
-    Aiva::Process::ExitSuccess();
+    Aiva::System::ExitSuccess();
 }
