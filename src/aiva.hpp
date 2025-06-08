@@ -415,6 +415,17 @@ extern "C" { namespace Aiva::WinApi
     static auto const INFINITE = (DWORD)(-1);
     static auto const WAIT_FAILED = (DWORD)(-1);
 
+    static auto const WS_OVERLAPPED = (DWORD)(0x00000000L);
+    static auto const WS_CAPTION = (DWORD)(0x00C00000L);
+    static auto const WS_SYSMENU = (DWORD)(0x00080000L);
+    static auto const WS_THICKFRAME = (DWORD)(0x00040000L);
+    static auto const WS_MINIMIZEBOX = (DWORD)(0x00020000L);
+    static auto const WS_MAXIMIZEBOX = (DWORD)(0x00010000L);
+    static auto const WS_OVERLAPPEDWINDOW = (DWORD)(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+    static auto const WS_VISIBLE = (DWORD)(0x10000000L);
+
+    static auto const PM_REMOVE = (UINT)(0x0001);
+
     // Process Management
 
     [[noreturn]] __attribute__((dllimport, stdcall)) void ExitProcess(UINT uExitCode);
@@ -2150,6 +2161,7 @@ namespace Aiva
 
     private:
         static auto constexpr kWindowClassName = L"Aiva::Window";
+        static auto constexpr kWindowName = L"aiva";
 
 
         class WindowClass final : public NonCopyable
@@ -2163,8 +2175,14 @@ namespace Aiva
         class Window final : public NonCopyable
         {
         public:
-            Window() {}
-            ~Window() {}
+            Window();
+            ~Window();
+
+        private:
+            void WindowCoroutine(Coroutines::ICoroutineControl const& control);
+
+            volatile uintptr_t m_stopFlag;
+            WinApi::HWND m_windowHandle;
         };
 
 
@@ -2204,6 +2222,60 @@ namespace Aiva
 
         if (!WinApi::UnregisterClassW(lpszClassName, hInstance))
             CheckNoEntry();
+    }
+
+
+    Windows::Window::Window()
+    {
+        Intrin::AtomicExchange(&m_stopFlag, false);
+
+        Coroutines::Spawn([this](auto const& control)
+            { WindowCoroutine(control); });
+    }
+
+
+    Windows::Window::~Window()
+    {
+        Intrin::AtomicExchange(&m_stopFlag, true);
+    }
+
+
+    void Windows::Window::WindowCoroutine(Coroutines::ICoroutineControl const& control)
+    {
+        m_windowHandle = WinApi::CreateWindowExW
+        (
+            /*dwExStyle*/ 0u,
+            /*lpClassName*/ kWindowClassName,
+            /*lpWindowName*/ kWindowName,
+            /*dwStyle*/ WinApi::WS_OVERLAPPEDWINDOW | WinApi::WS_VISIBLE,
+            /*X*/ 0,
+            /*Y*/ 0,
+            /*nWidth*/ 1280,
+            /*nHeight*/ 720,
+            /*hWndParent*/ nullptr,
+            /*hMenu*/ nullptr,
+            /*hInstance*/ WinApi::GetModuleHandleW(nullptr),
+            /*lpParam*/ nullptr
+        );
+        if (!m_windowHandle)
+            CheckNoEntry();
+
+        while (Intrin::AtomicCompareExchange(&m_stopFlag, false, false) == false)
+        {
+            auto msg = WinApi::MSG{};
+
+            while (WinApi::PeekMessageW(&msg, m_windowHandle, 0u, 0u, WinApi::PM_REMOVE))
+            {
+                WinApi::TranslateMessage(&msg);
+                WinApi::DispatchMessageW(&msg);
+            }
+
+            control.YieldOnTheCurrentWorker();
+        }
+
+        if (!WinApi::DestroyWindow(m_windowHandle))
+            CheckNoEntry();
+        m_windowHandle = nullptr;
     }
 
 
