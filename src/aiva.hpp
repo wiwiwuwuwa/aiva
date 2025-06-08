@@ -277,20 +277,39 @@ extern "C" { namespace Aiva::WinApi
 {
     // Base Types
 
+    using BYTE = uint8_t;
     using WORD = uint16_t;
     using DWORD = uint32_t;
     using UINT = uint32_t;
+    using LONG = sint32_t;
     using BOOL = sint32_t;
+    using ATOM = WORD;
     using HANDLE = void*;
     using LPVOID = void*;
     using LPCVOID = void const*;
     using LPDWORD = DWORD*;
+    using LPBOOL = BOOL*;
     using SIZE_T = size_t;
     using ULONG_PTR = uintptr_t;
+    using UINT_PTR = uintptr_t;
     using LONG_PTR = sintptr_t;
+
+    using WCHAR = wchar_t;
+    using LPCWSTR = WCHAR const*;
+    using LPWSTR = WCHAR*;
+    using HMODULE = HANDLE;
+    using HINSTANCE = HANDLE;
+    using HWND = HANDLE;
+    using HMENU = HANDLE;
+    using HMONITOR = HANDLE;
+
+    using LRESULT = LONG_PTR;
+    using WPARAM = UINT_PTR;
+    using LPARAM = LONG_PTR;
 
     using LPTHREAD_START_ROUTINE = DWORD(__attribute__((stdcall))*)(LPVOID);
     using LPFIBER_START_ROUTINE = void (__attribute__((stdcall))*)(LPVOID);
+    using WNDPROC = LRESULT(__attribute__((stdcall))*)(HWND, UINT, WPARAM, LPARAM);
 
     // Structures
 
@@ -330,6 +349,63 @@ extern "C" { namespace Aiva::WinApi
     struct OVERLAPPED;
     using LPOVERLAPPED = OVERLAPPED*;
 
+
+    struct POINT
+    {
+        LONG x;
+        LONG y;
+    };
+    using LPPOINT = POINT*;
+
+
+    struct MSG
+    {
+        HWND hwnd;
+        UINT message;
+        WPARAM wParam;
+        LPARAM lParam;
+        DWORD time;
+        POINT pt;
+    };
+    using LPMSG = MSG*;
+
+
+    struct RECT
+    {
+        LONG left;
+        LONG top;
+        LONG right;
+        LONG bottom;
+    };
+    using LPRECT = RECT*;
+
+
+    struct WNDCLASSEXW
+    {
+        UINT cbSize;
+        UINT style;
+        WNDPROC lpfnWndProc;
+        int cbClsExtra;
+        int cbWndExtra;
+        HINSTANCE hInstance;
+        HANDLE hIcon;
+        HANDLE hCursor;
+        HANDLE hbrBackground;
+        LPCWSTR lpszMenuName;
+        LPCWSTR lpszClassName;
+        HANDLE hIconSm;
+    };
+
+
+    struct MONITORINFO
+    {
+        DWORD cbSize;
+        RECT rcMonitor;
+        RECT rcWork;
+        DWORD dwFlags;
+    };
+    using LPMONITORINFO = MONITORINFO*;
+
     // Constants
 
     static auto const INVALID_HANDLE_VALUE = (HANDLE)(LONG_PTR)(-1);
@@ -337,17 +413,11 @@ extern "C" { namespace Aiva::WinApi
     static auto const STD_OUTPUT_HANDLE = (DWORD)(-11);
     static auto const STD_ERROR_HANDLE = (DWORD)(-12);
     static auto const INFINITE = (DWORD)(-1);
-    static auto const TLS_OUT_OF_INDEXES = (DWORD)(-1);
     static auto const WAIT_FAILED = (DWORD)(-1);
 
     // Process Management
 
     [[noreturn]] __attribute__((dllimport, stdcall)) void ExitProcess(UINT uExitCode);
-
-    // File Management
-
-    __attribute__((dllimport, stdcall)) HANDLE GetStdHandle(DWORD nStdHandle);
-    __attribute__((dllimport, stdcall)) BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
 
     // Heap Management
 
@@ -356,7 +426,7 @@ extern "C" { namespace Aiva::WinApi
     __attribute__((dllimport, stdcall)) LPVOID HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
     __attribute__((dllimport, stdcall)) BOOL HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
 
-    // Thread Management
+    // Process/Thread Management
 
     __attribute__((dllimport, stdcall)) HANDLE CreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
     __attribute__((dllimport, stdcall)) BOOL CloseHandle(HANDLE hObject);
@@ -374,6 +444,40 @@ extern "C" { namespace Aiva::WinApi
     __attribute__((dllimport, stdcall)) LPVOID CreateFiber(SIZE_T dwStackSize, LPFIBER_START_ROUTINE lpStartAddress, LPVOID lpParameter);
     __attribute__((dllimport, stdcall)) void SwitchToFiber(LPVOID lpFiber);
     __attribute__((dllimport, stdcall)) void DeleteFiber(LPVOID lpFiber);
+
+    // File Management
+
+    __attribute__((dllimport, stdcall)) HANDLE GetStdHandle(DWORD nStdHandle);
+    __attribute__((dllimport, stdcall)) BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
+
+    // Module/Instance Management
+
+    __attribute__((dllimport, stdcall)) HMODULE GetModuleHandleW(LPCWSTR lpModuleName);
+
+    // Window Class Management
+
+    __attribute__((dllimport, stdcall)) ATOM RegisterClassExW(const WNDCLASSEXW *lpwcx);
+    __attribute__((dllimport, stdcall)) BOOL UnregisterClassW(LPCWSTR lpClassName, HINSTANCE hInstance);
+    __attribute__((dllimport, stdcall)) LRESULT DefWindowProcW(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+
+    // Window Management
+
+    __attribute__((dllimport, stdcall)) HWND CreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
+    __attribute__((dllimport, stdcall)) BOOL DestroyWindow(HWND hWnd);
+    __attribute__((dllimport, stdcall)) BOOL IsWindow(HWND hWnd);
+    __attribute__((dllimport, stdcall)) BOOL GetWindowRect(HWND hWnd, LPRECT lpRect);
+    __attribute__((dllimport, stdcall)) BOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags);
+
+    // Message Handling
+
+    __attribute__((dllimport, stdcall)) BOOL PeekMessageW(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg);
+    __attribute__((dllimport, stdcall)) BOOL TranslateMessage(const MSG *lpMsg);
+    __attribute__((dllimport, stdcall)) LRESULT DispatchMessageW(const MSG *lpMsg);
+
+    // Display/Monitor Management
+
+    __attribute__((dllimport, stdcall)) HMONITOR MonitorFromWindow(HWND hwnd, DWORD dwFlags);
+    __attribute__((dllimport, stdcall)) BOOL GetMonitorInfoW(HMONITOR hMonitor, LPMONITORINFO lpmi);
 }}
 
 
@@ -2045,11 +2149,14 @@ namespace Aiva
         static void ShutSystem();
 
     private:
+        static auto constexpr kWindowClassName = L"Aiva::Window";
+
+
         class WindowClass final : public NonCopyable
         {
         public:
-            WindowClass() {}
-            ~WindowClass() {}
+            WindowClass();
+            ~WindowClass();
         };
 
 
@@ -2077,6 +2184,29 @@ namespace Aiva
 
 namespace Aiva
 {
+    Windows::WindowClass::WindowClass()
+    {
+        auto windowClass = WinApi::WNDCLASSEXW{};
+        windowClass.cbSize = sizeof(WinApi::WNDCLASSEXW);
+        windowClass.lpfnWndProc = WinApi::DefWindowProcW;
+        windowClass.hInstance = WinApi::GetModuleHandleW(nullptr);
+        windowClass.lpszClassName = kWindowClassName;
+
+        if (WinApi::RegisterClassExW(&windowClass) == 0)
+            CheckNoEntry();
+    }
+
+
+    Windows::WindowClass::~WindowClass()
+    {
+        auto const lpszClassName = kWindowClassName;
+        auto const hInstance = WinApi::GetModuleHandleW(nullptr);
+
+        if (!WinApi::UnregisterClassW(lpszClassName, hInstance))
+            CheckNoEntry();
+    }
+
+
     void Windows::InitSystem()
     {
         SpinLockScope_t const lockScope{ GLock };
