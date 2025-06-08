@@ -2030,3 +2030,81 @@ namespace Aiva
     ManageObject<Coroutines::CoroutineQueue> Coroutines::GCoroutineQueue;
     Span<Coroutines::WorkerThread> Coroutines::GWorkerThreads;
 }
+
+
+// --------------------------------------------------------
+// "windows.hpp"
+
+
+namespace Aiva
+{
+    class Windows final
+    {
+    public:
+        static void InitSystem();
+        static void ShutSystem();
+
+    private:
+        class WindowClass final : public NonCopyable
+        {
+        public:
+            WindowClass() {}
+            ~WindowClass() {}
+        };
+
+
+        class Window final : public NonCopyable
+        {
+        public:
+            Window() {}
+            ~Window() {}
+        };
+
+
+        Windows() = delete;
+
+        static SpinLock GLock;
+        static bool GInitialized;
+        static ManageObject<WindowClass> GWindowClass;
+        static ManageObject<Window> GWindow;
+    };
+}
+
+
+// --------------------------------------------------------
+// "windows.cpp"
+
+
+namespace Aiva
+{
+    void Windows::InitSystem()
+    {
+        SpinLockScope_t const lockScope{ GLock };
+        if (GInitialized)
+            return;
+
+        GWindowClass.Construct();
+        GWindow.Construct();
+
+        GInitialized = true;
+    }
+
+
+    void Windows::ShutSystem()
+    {
+        SpinLockScope_t const lockScope{ GLock };
+        if (!GInitialized)
+            return;
+
+        GWindow.Destruct();
+        GWindowClass.Destruct();
+
+        GInitialized = false;
+    }
+
+
+    SpinLock Windows::GLock;
+    bool Windows::GInitialized = false;
+    ManageObject<Windows::WindowClass> Windows::GWindowClass;
+    ManageObject<Windows::Window> Windows::GWindow;
+}
