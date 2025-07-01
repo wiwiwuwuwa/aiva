@@ -1868,13 +1868,13 @@ namespace Aiva
         class WorkerThread final : public NonCopyable
         {
         public:
-            WorkerThread(uintptr_t const workerMask, CoroutineQueue& coroutineQueue);
+            WorkerThread(uintptr_t const workerIndex, CoroutineQueue& coroutineQueue);
             ~WorkerThread();
 
         private:
             __attribute__((stdcall)) static WinApi::DWORD NativeAction(WinApi::LPVOID lpParameter);
 
-            uintptr_t m_workerMask;
+            uintptr_t m_workerIndex;
             CoroutineQueue& m_coroutineQueue;
             WinApi::HANDLE m_threadHandle;
             WinApi::LPVOID m_fiberHandle;
@@ -1908,7 +1908,7 @@ namespace Aiva
 
         GWorkerThreads = Memory::GetHeapAlloc().AllocArray<WorkerThread>(System::GetNumberOfCores());
         for (auto i = size_t{}; i < GWorkerThreads.GetSize(); i++)
-            new (&GWorkerThreads[i]) WorkerThread(1u << i, *GCoroutineQueue);
+            new (&GWorkerThreads[i]) WorkerThread(i, *GCoroutineQueue);
 
         GInitialized = true;
     }
@@ -2072,12 +2072,9 @@ namespace Aiva
     }
 
 
-    Coroutines::WorkerThread::WorkerThread(uintptr_t const workerMask, CoroutineQueue& coroutineQueue)
-        : m_workerMask{ workerMask }, m_coroutineQueue{ coroutineQueue }, m_stopFlag{ false }
+    Coroutines::WorkerThread::WorkerThread(uintptr_t const workerIndex, CoroutineQueue& coroutineQueue)
+        : m_workerIndex{ workerIndex }, m_coroutineQueue{ coroutineQueue }, m_stopFlag{ false }
     {
-        if (!workerMask)
-            CheckNoEntry();
-
         m_threadHandle = WinApi::CreateThread(nullptr, 16384, NativeAction, this, 0u, nullptr);
         if (!m_threadHandle)
             CheckNoEntry();
@@ -2108,7 +2105,7 @@ namespace Aiva
 
         while (Intrin::AtomicCompareExchange(&self->m_stopFlag, false, false) == false)
         {
-            auto const coroutine = self->m_coroutineQueue.Dequeue(self->m_workerMask);
+            auto const coroutine = self->m_coroutineQueue.Dequeue(1u << self->m_workerIndex);
             if (!coroutine)
             {
                 Intrin::YieldProcessor();
@@ -2119,6 +2116,7 @@ namespace Aiva
             if (!coroutineFiberHandle)
                 CheckNoEntry();
 
+            coroutine->SetWorkerMask(1u << self->m_workerIndex);
             coroutine->SetParentFiberHandle(self->m_fiberHandle);
             WinApi::SwitchToFiber(coroutineFiberHandle);
             coroutine->SetParentFiberHandle(nullptr);
