@@ -2,8 +2,10 @@ import * as child_process from 'child_process';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-const PATH_COMPILER = path.join(`C:`, `Program Files`, `LLVM`, `bin`, `clang++.exe`);
+
+const PATH_COMPILER = path.join(`C:`, `programs`, `llvm`, `bin`, `clang++.exe`);
 const PATH_WINDOWS_SDK_LIBS = path.join(`C:`, `Program Files (x86)`, `Windows Kits`, `10`, `Lib`, `10.0.26100.0`, `um`, `x64`);
+
 
 async function executeCommand(cwd: string, command: string, args: string[]): Promise<void>
 {
@@ -31,6 +33,7 @@ async function executeCommand(cwd: string, command: string, args: string[]): Pro
     });
 }
 
+
 async function findSourceFiles(dir: string): Promise<string[]>
 {
     const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -49,6 +52,7 @@ async function findSourceFiles(dir: string): Promise<string[]>
 
     return results;
 }
+
 
 async function buildExecutable
 ({
