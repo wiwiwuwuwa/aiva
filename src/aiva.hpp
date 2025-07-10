@@ -422,9 +422,14 @@ extern "C" { namespace Aiva::WinApi
     static auto const WS_MINIMIZEBOX = (DWORD)(0x00020000L);
     static auto const WS_MAXIMIZEBOX = (DWORD)(0x00010000L);
     static auto const WS_OVERLAPPEDWINDOW = (DWORD)(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-    static auto const WS_VISIBLE = (DWORD)(0x10000000L);
 
     static auto const PM_REMOVE = (UINT)(0x0001);
+
+    static auto const MONITOR_DEFAULTTONEAREST = (DWORD)(0x00000002);
+    static auto const HWND_TOP = (HANDLE)(0);
+    static auto const SWP_NOSIZE = (UINT)(0x0001);
+    static auto const SWP_NOZORDER = (UINT)(0x0004);
+    static auto const SWP_SHOWWINDOW = (UINT)(0x0040);
 
     // Process Management
 
@@ -2245,7 +2250,7 @@ namespace Aiva
             /*dwExStyle*/ 0u,
             /*lpClassName*/ kWindowClassName,
             /*lpWindowName*/ kWindowName,
-            /*dwStyle*/ WinApi::WS_OVERLAPPEDWINDOW | WinApi::WS_VISIBLE,
+            /*dwStyle*/ WinApi::WS_OVERLAPPEDWINDOW,
             /*X*/ 0,
             /*Y*/ 0,
             /*nWidth*/ 1280,
@@ -2256,6 +2261,34 @@ namespace Aiva
             /*lpParam*/ nullptr
         );
         if (!m_windowHandle)
+            CheckNoEntry();
+
+        auto windowRect = WinApi::RECT{};
+        if (!WinApi::GetWindowRect(m_windowHandle, &windowRect))
+            CheckNoEntry();
+
+        auto const monitor = WinApi::MonitorFromWindow(m_windowHandle, WinApi::MONITOR_DEFAULTTONEAREST);
+        if (!monitor)
+            CheckNoEntry();
+
+        auto monitorInfo = WinApi::MONITORINFO{};
+        monitorInfo.cbSize = sizeof(WinApi::MONITORINFO);
+        if (!WinApi::GetMonitorInfoW(monitor, &monitorInfo))
+            CheckNoEntry();
+
+        auto const posX = (monitorInfo.rcWork.right - monitorInfo.rcWork.left) / 2 - (windowRect.right - windowRect.left) / 2;
+        auto const posY = (monitorInfo.rcWork.bottom - monitorInfo.rcWork.top) / 2 - (windowRect.bottom - windowRect.top) / 2;
+
+        if (!WinApi::SetWindowPos
+        (
+            /* hWnd */ m_windowHandle,
+            /* hWndInsertAfter */ WinApi::HWND_TOP,
+            /* X */ posX,
+            /* Y */ posY,
+            /* cx */ 0,
+            /* cy */ 0,
+            /* uFlags */ WinApi::SWP_NOSIZE | WinApi::SWP_NOZORDER | WinApi::SWP_SHOWWINDOW
+        ))
             CheckNoEntry();
 
         while (Intrin::AtomicCompareExchange(&m_stopFlag, false, false) == false)
