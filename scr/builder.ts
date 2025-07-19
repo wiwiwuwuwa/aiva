@@ -125,7 +125,7 @@ try
         defEntries: [],
         srcPaths: [ path.join(__dirname, `..`, `src`) ],
         libPaths: [ PATH_WINDOWS_SDK_LIBS ],
-        libEntries: [ `user32`, `kernel32` ],
+        libEntries: [ `dxgi`, `dxguid`, `uuid`, `user32`, `kernel32` ],
         outPath: path.join(__dirname, `..`, `bin`, `aiva.exe`),
     });
 }

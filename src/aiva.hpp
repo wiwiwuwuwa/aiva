@@ -282,6 +282,7 @@ extern "C" { namespace Aiva::WinApi
     using DWORD = uint32_t;
     using UINT = uint32_t;
     using LONG = sint32_t;
+    using ULONG = uint32_t;
     using BOOL = sint32_t;
     using ATOM = WORD;
     using HANDLE = void*;
@@ -303,6 +304,7 @@ extern "C" { namespace Aiva::WinApi
     using HMENU = HANDLE;
     using HMONITOR = HANDLE;
 
+    using HRESULT = LONG;
     using LRESULT = LONG_PTR;
     using WPARAM = UINT_PTR;
     using LPARAM = LONG_PTR;
@@ -312,6 +314,15 @@ extern "C" { namespace Aiva::WinApi
     using WNDPROC = LRESULT(__attribute__((stdcall))*)(HWND, UINT, WPARAM, LPARAM);
 
     // Structures
+
+    struct GUID final
+    {
+        DWORD Data1;
+        WORD Data2;
+        WORD Data3;
+        BYTE Data4[8];
+    };
+
 
     struct SECURITY_ATTRIBUTES final
     {
@@ -406,6 +417,9 @@ extern "C" { namespace Aiva::WinApi
     };
     using LPMONITORINFO = MONITORINFO*;
 
+
+    struct LUID;
+
     // Constants
 
     static auto const INVALID_HANDLE_VALUE = (HANDLE)(LONG_PTR)(-1);
@@ -495,6 +509,151 @@ extern "C" { namespace Aiva::WinApi
     __attribute__((dllimport, stdcall)) HMONITOR MonitorFromWindow(HWND hwnd, DWORD dwFlags);
     __attribute__((dllimport, stdcall)) BOOL GetMonitorInfoW(HMONITOR hMonitor, LPMONITORINFO lpmi);
 }}
+
+
+// ------------------------------------
+// "wincom.hpp"
+
+
+namespace Aiva::WinCom
+{
+    struct IUnknown
+    {
+        __attribute__((stdcall)) virtual WinApi::HRESULT QueryInterface(WinApi::GUID const& riid, void** ppvObject) = 0;
+        __attribute__((stdcall)) virtual WinApi::ULONG AddRef() = 0;
+        __attribute__((stdcall)) virtual WinApi::ULONG Release() = 0;
+    };
+
+
+    extern "C" WinApi::GUID const IID_IUnknown;
+}
+
+
+// ------------------------------------
+// "dxgi.hpp"
+
+
+namespace Aiva::Dxgi
+{
+    struct DXGI_SWAP_CHAIN_DESC;
+    struct DXGI_SWAP_CHAIN_DESC1;
+    struct DXGI_SWAP_CHAIN_FULLSCREEN_DESC;
+    struct IDXGIAdapter;
+    struct IDXGIAdapter1;
+    struct IDXGIOutput;
+    struct IDXGISwapChain;
+    struct IDXGISwapChain1;
+
+
+    enum class DXGI_FEATURE
+    {
+        DXGI_FEATURE_PRESENT_ALLOW_TEARING = 0
+    };
+
+
+    enum class DXGI_GPU_PREFERENCE
+    {
+        DXGI_GPU_PREFERENCE_UNSPECIFIED = 0,
+        DXGI_GPU_PREFERENCE_MINIMUM_POWER = DXGI_GPU_PREFERENCE_UNSPECIFIED + 1,
+        DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE = DXGI_GPU_PREFERENCE_MINIMUM_POWER + 1,
+    };
+
+
+    struct IDXGIObject : public WinCom::IUnknown
+    {
+        __attribute__((stdcall)) virtual WinApi::HRESULT SetPrivateData(WinApi::GUID const& Name, WinApi::UINT const DataSize, void const*const pData) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT SetPrivateDataInterface(WinApi::GUID const& Name, IUnknown const*const pUnknown) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT GetPrivateData(WinApi::GUID const& Name, WinApi::UINT *const pDataSize, void *const pData) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT GetParent(WinApi::GUID const& riid, void **const ppParent) = 0;
+    };
+
+
+    struct IDXGIFactory : public IDXGIObject
+    {
+        __attribute__((stdcall)) virtual WinApi::HRESULT EnumAdapters(WinApi::UINT const Adapter, IDXGIAdapter **const ppAdapter) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT MakeWindowAssociation(WinApi::HWND const WindowHandle, WinApi::UINT const Flags) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT GetWindowAssociation(WinApi::HWND *const pWindowHandle) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT CreateSwapChain(IUnknown const*const pDevice, DXGI_SWAP_CHAIN_DESC const*const pDesc, IDXGISwapChain **const ppSwapChain) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT CreateSoftwareAdapter(WinApi::HMODULE const Module, IDXGIAdapter **const ppAdapter) = 0;
+    };
+
+
+    struct IDXGIFactory1 : public IDXGIFactory
+    {
+        __attribute__((stdcall)) virtual WinApi::HRESULT EnumAdapters1(WinApi::UINT const Adapter, IDXGIAdapter1 **const ppAdapter) = 0;
+        __attribute__((stdcall)) virtual WinApi::BOOL IsCurrent() = 0;
+    };
+
+
+    struct IDXGIFactory2 : public IDXGIFactory1
+    {
+        __attribute__((stdcall)) virtual WinApi::BOOL IsWindowedStereoEnabled() = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT CreateSwapChainForHwnd(IUnknown *const pDevice, WinApi::HWND const hWnd, DXGI_SWAP_CHAIN_DESC1 const*const pDesc, DXGI_SWAP_CHAIN_FULLSCREEN_DESC const*const pFullscreenDesc, IDXGIOutput *const pRestrictToOutput, IDXGISwapChain1 **const ppSwapChain) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT CreateSwapChainForCoreWindow(IUnknown *const pDevice, IUnknown *const pWindow, DXGI_SWAP_CHAIN_DESC1 const*const pDesc, IDXGIOutput *const pRestrictToOutput, IDXGISwapChain1 **const ppSwapChain) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT GetSharedResourceAdapterLuid(WinApi::HANDLE const hResource, WinApi::LUID *const pLuid) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT RegisterStereoStatusWindow(WinApi::HWND const WindowHandle, WinApi::UINT const wMsg, WinApi::DWORD *const pdwCookie) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT RegisterStereoStatusEvent(WinApi::HANDLE const hEvent, WinApi::DWORD *const pdwCookie) = 0;
+        __attribute__((stdcall)) virtual void UnregisterStereoStatus(WinApi::DWORD const dwCookie) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT RegisterOcclusionStatusWindow(WinApi::HWND const WindowHandle, WinApi::UINT const wMsg, WinApi::DWORD *const pdwCookie) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT RegisterOcclusionStatusEvent(WinApi::HANDLE const hEvent, WinApi::DWORD *const pdwCookie) = 0;
+        __attribute__((stdcall)) virtual void UnregisterOcclusionStatus(WinApi::DWORD const dwCookie) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT CreateSwapChainForComposition(IUnknown *const pDevice, DXGI_SWAP_CHAIN_DESC1 const*const pDesc, IDXGIOutput *const pRestrictToOutput, IDXGISwapChain1 **const ppSwapChain) = 0;
+    };
+
+
+    struct IDXGIFactory3 : public IDXGIFactory2
+    {
+        __attribute__((stdcall)) virtual WinApi::UINT GetCreationFlags() = 0;
+    };
+
+
+    struct IDXGIFactory4 : public IDXGIFactory3
+    {
+        __attribute__((stdcall)) virtual WinApi::HRESULT EnumAdapterByLuid(WinApi::LUID const AdapterLuid, WinApi::GUID const& riid, void **const ppvAdapter) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT EnumWarpAdapter(WinApi::GUID const& riid, void **const ppvAdapter) = 0;
+    };
+
+
+    struct IDXGIFactory5 : public IDXGIFactory4
+    {
+        __attribute__((stdcall)) virtual WinApi::HRESULT CheckFeatureSupport(DXGI_FEATURE const Feature, void *const pFeatureSupportData, WinApi::UINT const FeatureSupportDataSize) = 0;
+    };
+
+
+    struct IDXGIFactory6 : public IDXGIFactory5
+    {
+        __attribute__((stdcall)) virtual WinApi::HRESULT EnumAdapterByGpuPreference(WinApi::UINT const Adapter, DXGI_GPU_PREFERENCE const GpuPreference, WinApi::GUID const& riid, void **const ppvAdapter) = 0;
+    };
+
+
+    struct IDXGIFactory7 : public IDXGIFactory6
+    {
+        __attribute__((stdcall)) virtual WinApi::HRESULT RegisterAdaptersChangedEvent(WinApi::HANDLE const hEvent, WinApi::DWORD *const pdwCookie) = 0;
+        __attribute__((stdcall)) virtual WinApi::HRESULT UnregisterAdaptersChangedEvent(WinApi::DWORD const dwCookie) = 0;
+    };
+
+
+    static inline constexpr WinApi::UINT const DXGI_CREATE_FACTORY_DEBUG{ 0x01 };
+
+
+    extern "C" WinApi::GUID const IID_IDXGIObject;
+    extern "C" WinApi::GUID const IID_IDXGIFactory;
+    extern "C" WinApi::GUID const IID_IDXGIFactory1;
+    extern "C" WinApi::GUID const IID_IDXGIFactory2;
+    extern "C" WinApi::GUID const IID_IDXGIFactory3;
+    extern "C" WinApi::GUID const IID_IDXGIFactory4;
+    extern "C" WinApi::GUID const IID_IDXGIFactory5;
+    extern "C" WinApi::GUID const IID_IDXGIFactory6;
+    extern "C" WinApi::GUID const IID_IDXGIFactory7;
+    extern "C" WinApi::GUID const IID_IDXGIAdapter;
+    extern "C" WinApi::GUID const IID_IDXGIAdapter1;
+    extern "C" WinApi::GUID const IID_IDXGIOutput;
+    extern "C" WinApi::GUID const IID_IDXGISwapChain;
+    extern "C" WinApi::GUID const IID_IDXGISwapChain1;
+
+
+    extern "C" __attribute__((dllimport, stdcall)) WinApi::HRESULT CreateDXGIFactory2(WinApi::UINT const Flags, WinApi::GUID const& riid, void **const ppFactory);
+}
 
 
 // ------------------------------------
