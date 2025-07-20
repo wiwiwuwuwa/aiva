@@ -636,20 +636,8 @@ namespace Aiva::Dxgi
     static inline constexpr WinApi::UINT const DXGI_CREATE_FACTORY_DEBUG{ 0x01 };
 
 
-    extern "C" WinApi::GUID const IID_IDXGIObject;
-    extern "C" WinApi::GUID const IID_IDXGIFactory;
-    extern "C" WinApi::GUID const IID_IDXGIFactory1;
     extern "C" WinApi::GUID const IID_IDXGIFactory2;
-    extern "C" WinApi::GUID const IID_IDXGIFactory3;
-    extern "C" WinApi::GUID const IID_IDXGIFactory4;
-    extern "C" WinApi::GUID const IID_IDXGIFactory5;
-    extern "C" WinApi::GUID const IID_IDXGIFactory6;
     extern "C" WinApi::GUID const IID_IDXGIFactory7;
-    extern "C" WinApi::GUID const IID_IDXGIAdapter;
-    extern "C" WinApi::GUID const IID_IDXGIAdapter1;
-    extern "C" WinApi::GUID const IID_IDXGIOutput;
-    extern "C" WinApi::GUID const IID_IDXGISwapChain;
-    extern "C" WinApi::GUID const IID_IDXGISwapChain1;
 
 
     extern "C" __attribute__((dllimport, stdcall)) WinApi::HRESULT CreateDXGIFactory2(WinApi::UINT const Flags, WinApi::GUID const& riid, void **const ppFactory);
