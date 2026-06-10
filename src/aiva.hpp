@@ -210,6 +210,27 @@ namespace Aiva
 
 
 // ------------------------------------
+// "non_copyable.hpp"
+
+
+namespace Aiva
+{
+    class NonCopyable
+    {
+    public:
+        NonCopyable(NonCopyable const&) = delete;
+        NonCopyable& operator=(NonCopyable const&) = delete;
+        NonCopyable(NonCopyable&&) = delete;
+        NonCopyable& operator=(NonCopyable&&) = delete;
+
+    protected:
+        NonCopyable() = default;
+        ~NonCopyable() = default;
+    };
+}
+
+
+// ------------------------------------
 // "intrin.hpp"
 
 
@@ -218,10 +239,8 @@ namespace Aiva::Intrin
     template <typename TType>
     inline auto AtomicCompareExchange(TType *const dst, TType const cmp, TType const exg) noexcept -> TType;
 
-
     template <typename TType>
     inline auto AtomicExchange(TType *const dst, TType const exg) noexcept -> TType;
-
 
     inline void YieldProcessor() noexcept;
 }
@@ -256,27 +275,6 @@ namespace Aiva::Intrin
     {
         __builtin_ia32_pause();
     }
-}
-
-
-// ------------------------------------
-// "non_copyable.hpp"
-
-
-namespace Aiva
-{
-    class NonCopyable
-    {
-    public:
-        NonCopyable(NonCopyable const&) = delete;
-        NonCopyable& operator=(NonCopyable const&) = delete;
-        NonCopyable(NonCopyable&&) = delete;
-        NonCopyable& operator=(NonCopyable&&) = delete;
-
-    protected:
-        NonCopyable() = default;
-        ~NonCopyable() = default;
-    };
 }
 
 
