@@ -210,6 +210,56 @@ namespace Aiva
 
 
 // ------------------------------------
+// "intrin.hpp"
+
+
+namespace Aiva::Intrin
+{
+    template <typename TType>
+    inline auto AtomicCompareExchange(volatile TType *const dst, TType const cmp, TType const exg) -> TType;
+
+
+    template <typename TType>
+    inline auto AtomicExchange(volatile TType *const dst, TType const exg) -> TType;
+
+
+    inline void YieldProcessor();
+}
+
+
+// ------------------------------------
+// "intrin.inl"
+
+
+namespace Aiva::Intrin
+{
+    template <typename TType>
+    inline auto AtomicCompareExchange(volatile TType *const dst, TType const cmp, TType const exg) -> TType
+    {
+        static_assert(sizeof(TType) == 1 || sizeof(TType) == 2 || sizeof(TType) == 4 || sizeof(TType) == 8, "TType must be 1, 2, 4, or 8 bytes");
+        auto prev = cmp;
+        __atomic_compare_exchange_n(dst, &prev, exg, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+
+        return prev;
+    }
+
+
+    template <typename TType>
+    inline auto AtomicExchange(volatile TType *const dst, TType const exg) -> TType
+    {
+        static_assert(sizeof(TType) == 1 || sizeof(TType) == 2 || sizeof(TType) == 4 || sizeof(TType) == 8, "TType must be 1, 2, 4, or 8 bytes");
+        return __atomic_exchange_n(dst, exg, __ATOMIC_SEQ_CST);
+    }
+
+
+    inline void YieldProcessor()
+    {
+        __builtin_ia32_pause();
+    }
+}
+
+
+// ------------------------------------
 // "non_copyable.hpp"
 
 
