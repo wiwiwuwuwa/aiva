@@ -278,3 +278,43 @@ namespace Aiva
         ~NonCopyable() = default;
     };
 }
+
+
+// ------------------------------------
+// "lock_scope.hpp"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    class LockScope : public NonCopyable
+    {
+    public:
+        LockScope(TType const& lock);
+        ~LockScope();
+
+    private:
+        TType& m_lock;
+    };
+}
+
+
+// ------------------------------------
+// "lock_scope.inl"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    LockScope<TType>::LockScope(TType const& lock) : m_lock{ const_cast<TType&>(lock) }
+    {
+        m_lock.Lock();
+    }
+
+
+    template <typename TType>
+    LockScope<TType>::~LockScope()
+    {
+        m_lock.Unlock();
+    }
+}
