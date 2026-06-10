@@ -1,7 +1,7 @@
 #include "aiva.hpp"
 
 
-void Main()
+void main()
 {
     Aiva::Console::InitSystem();
     Aiva::Memory::InitSystem();

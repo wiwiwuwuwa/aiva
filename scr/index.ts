@@ -4,7 +4,7 @@ import * as path from 'path';
 
 
 const PATH_COMPILER = path.join(`C:`, `programs`, `llvm`, `bin`, `clang++.exe`);
-const PATH_WINDOWS_SDK_LIBS = path.join(`C:`, `Program Files (x86)`, `Windows Kits`, `10`, `Lib`, `10.0.26100.0`, `um`, `x64`);
+const PATH_WINDOWS_SDK_LIBS = path.join(`C:`, `Program Files (x86)`, `Windows Kits`, `10`, `Lib`, `10.0.28000.0`, `um`, `x64`);
 
 
 async function executeCommand(cwd: string, command: string, args: string[]): Promise<void>
@@ -14,8 +14,8 @@ async function executeCommand(cwd: string, command: string, args: string[]): Pro
         const proc = child_process.spawn(command, args,
         {
             cwd: cwd,
-            stdio: 'inherit',
-            shell: false
+            stdio: `inherit`,
+            shell: false,
         });
 
         proc.on(`close`, (code: number | null) =>
@@ -93,6 +93,7 @@ async function buildExecutable
         `-nostdinc`,
         `-nostdlib`,
         `-ffreestanding`,
+        `-fno-builtin`,
         `-fno-ident`,
         `-fno-rtti`,
         `-fno-exceptions`,
@@ -107,13 +108,14 @@ async function buildExecutable
         ...libPaths.map(libPath => `-L${libPath}`),
         ...libEntries.map(libEntry => `-l${libEntry}`),
         `-fuse-ld=lld`,
-        `-Wl,/entry:Main`,
+        `-Wl,/entry:main`,
         `-Wl,/subsystem:console`,
         `-Wl,/nodefaultlib`,
         `-o`,
         outPath,
     ]);
 }
+
 
 try
 {
