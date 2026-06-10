@@ -54,19 +54,19 @@ namespace Aiva::Templates
 
 
     template <typename TType>
-    constexpr auto GetNumberType() -> NumberType;
+    constexpr auto GetNumberType() noexcept -> NumberType;
 
 
     template <typename TType>
-    constexpr auto GetNumberSign() -> NumberSign;
+    constexpr auto GetNumberSign() noexcept -> NumberSign;
 
 
     template <typename TType>
-    constexpr auto GetNumberSize() -> NumberSize;
+    constexpr auto GetNumberSize() noexcept -> NumberSize;
 
 
     template <NumberType TType, NumberSign TSign, NumberSize TSize>
-    constexpr auto CreateNumber();
+    constexpr auto CreateNumber() noexcept;
 
 
     template <NumberType TType, NumberSign TSign, NumberSize TSize>
@@ -89,7 +89,7 @@ namespace Aiva::Templates
 namespace Aiva::Templates
 {
     template <typename TType>
-    constexpr auto GetNumberType() -> NumberType
+    constexpr auto GetNumberType() noexcept -> NumberType
     {
         if constexpr (IsNumber_v<TType>)
         {
@@ -106,7 +106,7 @@ namespace Aiva::Templates
 
 
     template <typename TType>
-    constexpr auto GetNumberSign() -> NumberSign
+    constexpr auto GetNumberSign() noexcept -> NumberSign
     {
         if constexpr (IsNumber_v<TType>)
         {
@@ -123,7 +123,7 @@ namespace Aiva::Templates
 
 
     template <typename TType>
-    constexpr auto GetNumberSize() -> NumberSize
+    constexpr auto GetNumberSize() noexcept -> NumberSize
     {
         if constexpr (IsNumber_v<TType>)
         {
@@ -146,7 +146,7 @@ namespace Aiva::Templates
 
 
     template <NumberType TType, NumberSign TSign, NumberSize TSize>
-    constexpr auto CreateNumber()
+    constexpr auto CreateNumber() noexcept
     {
         #define CreateNumber_Begin() \
             if constexpr (TType == NumberType::MAX || TSign == NumberSign::MAX || TSize == NumberSize::MAX) \
@@ -216,14 +216,14 @@ namespace Aiva
 namespace Aiva::Intrin
 {
     template <typename TType>
-    inline auto AtomicCompareExchange(volatile TType *const dst, TType const cmp, TType const exg) -> TType;
+    inline auto AtomicCompareExchange(TType *const dst, TType const cmp, TType const exg) noexcept -> TType;
 
 
     template <typename TType>
-    inline auto AtomicExchange(volatile TType *const dst, TType const exg) -> TType;
+    inline auto AtomicExchange(TType *const dst, TType const exg) noexcept -> TType;
 
 
-    inline void YieldProcessor();
+    inline void YieldProcessor() noexcept;
 }
 
 
@@ -234,7 +234,7 @@ namespace Aiva::Intrin
 namespace Aiva::Intrin
 {
     template <typename TType>
-    inline auto AtomicCompareExchange(volatile TType *const dst, TType const cmp, TType const exg) -> TType
+    inline auto AtomicCompareExchange(TType *const dst, TType const cmp, TType const exg) noexcept -> TType
     {
         static_assert(sizeof(TType) == 1 || sizeof(TType) == 2 || sizeof(TType) == 4 || sizeof(TType) == 8, "TType must be 1, 2, 4, or 8 bytes");
         auto prev = cmp;
@@ -245,14 +245,14 @@ namespace Aiva::Intrin
 
 
     template <typename TType>
-    inline auto AtomicExchange(volatile TType *const dst, TType const exg) -> TType
+    inline auto AtomicExchange(TType *const dst, TType const exg) noexcept -> TType
     {
         static_assert(sizeof(TType) == 1 || sizeof(TType) == 2 || sizeof(TType) == 4 || sizeof(TType) == 8, "TType must be 1, 2, 4, or 8 bytes");
         return __atomic_exchange_n(dst, exg, __ATOMIC_SEQ_CST);
     }
 
 
-    inline void YieldProcessor()
+    inline void YieldProcessor() noexcept
     {
         __builtin_ia32_pause();
     }
@@ -290,8 +290,8 @@ namespace Aiva
     class LockScope : public NonCopyable
     {
     public:
-        LockScope(TType const& lock);
-        ~LockScope();
+        LockScope(TType const& lock) noexcept;
+        ~LockScope() noexcept;
 
     private:
         TType& m_lock;
@@ -306,14 +306,14 @@ namespace Aiva
 namespace Aiva
 {
     template <typename TType>
-    LockScope<TType>::LockScope(TType const& lock) : m_lock{ const_cast<TType&>(lock) }
+    LockScope<TType>::LockScope(TType const& lock) noexcept : m_lock{ const_cast<TType&>(lock) }
     {
         m_lock.Lock();
     }
 
 
     template <typename TType>
-    LockScope<TType>::~LockScope()
+    LockScope<TType>::~LockScope() noexcept
     {
         m_lock.Unlock();
     }
@@ -332,11 +332,11 @@ namespace Aiva
         SpinLock() = default;
         ~SpinLock() = default;
 
-        void Lock();
-        void Unlock();
+        void Lock() noexcept;
+        void Unlock() noexcept;
 
     private:
-        volatile uintptr_t m_locked = 0;
+        uintptr_t m_locked = 0;
     };
 }
 
@@ -347,7 +347,7 @@ namespace Aiva
 
 namespace Aiva
 {
-    void SpinLock::Lock()
+    void SpinLock::Lock() noexcept
     {
         while (true)
         {
@@ -359,7 +359,7 @@ namespace Aiva
     }
 
 
-    void SpinLock::Unlock()
+    void SpinLock::Unlock() noexcept
     {
         while (true)
         {
