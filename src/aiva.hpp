@@ -318,3 +318,55 @@ namespace Aiva
         m_lock.Unlock();
     }
 }
+
+
+// ------------------------------------
+// "spin_lock.hpp"
+
+
+namespace Aiva
+{
+    class SpinLock : public NonCopyable
+    {
+    public:
+        SpinLock() = default;
+        ~SpinLock() = default;
+
+        void Lock();
+        void Unlock();
+
+    private:
+        volatile uintptr_t m_locked = 0;
+    };
+}
+
+
+// ------------------------------------
+// "spin_lock.inl"
+
+
+namespace Aiva
+{
+    void SpinLock::Lock()
+    {
+        while (true)
+        {
+            if (Intrin::AtomicCompareExchange<uintptr_t>(&m_locked, 0, 1) == 0)
+                break;
+
+            Intrin::YieldProcessor();
+        }
+    }
+
+
+    void SpinLock::Unlock()
+    {
+        while (true)
+        {
+            if (Intrin::AtomicCompareExchange<uintptr_t>(&m_locked, 1, 0) == 1)
+                break;
+
+            Intrin::YieldProcessor();
+        }
+    }
+}
