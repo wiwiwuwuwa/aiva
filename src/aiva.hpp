@@ -520,9 +520,9 @@ extern "C" { namespace Aiva::WinApi
     static auto const STD_OUTPUT_HANDLE = (DWORD)(-11);
     static auto const STD_ERROR_HANDLE = (DWORD)(-12);
 
-    [[noreturn]] __attribute__((dllimport, stdcall)) void ExitProcess(UINT uExitCode);
-    __attribute__((dllimport, stdcall)) HANDLE GetStdHandle(DWORD nStdHandle);
-    __attribute__((dllimport, stdcall)) BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
+    [[noreturn]] __attribute__((dllimport, stdcall)) void ExitProcess(UINT uExitCode) noexcept;
+    __attribute__((dllimport, stdcall)) HANDLE GetStdHandle(DWORD nStdHandle) noexcept;
+    __attribute__((dllimport, stdcall)) BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped) noexcept;
 }}
 
 
