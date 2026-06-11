@@ -231,6 +231,92 @@ namespace Aiva
 
 
 // ------------------------------------
+// "cstr_view.hpp"
+
+
+namespace Aiva
+{
+    class CstrView final
+    {
+    public:
+        constexpr CstrView() noexcept;
+        constexpr CstrView(char const*const data) noexcept;
+
+        constexpr bool IsEmpty() const noexcept;
+        constexpr size_t StrLen() const noexcept;
+        constexpr char const* GetDataPtr() const noexcept;
+
+        constexpr operator bool() const noexcept;
+        constexpr char operator[](size_t const index) const noexcept;
+        constexpr operator char const*() const noexcept;
+
+    private:
+        char const& m_data;
+    };
+}
+
+
+// ------------------------------------
+// "cstr_view.inl"
+
+
+namespace Aiva
+{
+    constexpr CstrView::CstrView() noexcept : m_data{ *"" }
+    {
+        //
+    }
+
+
+    constexpr CstrView::CstrView(char const*const data) noexcept : m_data{ data ? *data : *"" }
+    {
+        //
+    }
+
+
+    constexpr bool CstrView::IsEmpty() const noexcept
+    {
+        return (&m_data)[0] == '\0';
+    }
+
+
+    constexpr size_t CstrView::StrLen() const noexcept
+    {
+        auto length = size_t{};
+
+        while ((&m_data)[length] != '\0')
+            length++;
+
+        return length;
+    }
+
+
+    constexpr char const* CstrView::GetDataPtr() const noexcept
+    {
+        return &m_data;
+    }
+
+
+    constexpr CstrView::operator bool() const noexcept
+    {
+        return (&m_data)[0] != '\0';
+    }
+
+
+    constexpr char CstrView::operator[](size_t const index) const noexcept
+    {
+        return (&m_data)[index];
+    }
+
+
+    constexpr CstrView::operator char const*() const noexcept
+    {
+        return &m_data;
+    }
+}
+
+
+// ------------------------------------
 // "intrin.hpp"
 
 
