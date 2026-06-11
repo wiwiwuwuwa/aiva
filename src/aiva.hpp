@@ -374,7 +374,7 @@ namespace Aiva
     class LockScope : public NonCopyable
     {
     public:
-        LockScope(TType const& lock) noexcept;
+        LockScope(TType& lock) noexcept;
         ~LockScope() noexcept;
 
     private:
@@ -390,7 +390,7 @@ namespace Aiva
 namespace Aiva
 {
     template <typename TType>
-    LockScope<TType>::LockScope(TType const& lock) noexcept : m_lock{ const_cast<TType&>(lock) }
+    LockScope<TType>::LockScope(TType& lock) noexcept : m_lock{ lock }
     {
         m_lock.Lock();
     }
