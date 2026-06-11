@@ -411,7 +411,7 @@ namespace Aiva
     template <typename TType>
     constexpr bool Span<TType>::IsEmpty() const noexcept
     {
-        return m_size <= 0;
+        return m_size == 0;
     }
 
 
