@@ -317,6 +317,141 @@ namespace Aiva
 
 
 // ------------------------------------
+// "span.hpp"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    class Span final
+    {
+    public:
+        constexpr Span() noexcept;
+        constexpr Span(size_t const size, TType& data) noexcept;
+        constexpr Span(size_t const size, TType *const data) noexcept;
+        constexpr Span(TType& data) noexcept;
+        constexpr Span(TType *const data) noexcept;
+        constexpr Span(nullptr_t const) noexcept;
+
+        constexpr bool IsEmpty() const noexcept;
+        constexpr size_t GetSize() const noexcept;
+        constexpr TType& GetDataRef() const noexcept;
+        constexpr TType* GetDataPtr() const noexcept;
+
+        constexpr operator bool() const noexcept;
+        constexpr TType& operator[](size_t const index) const noexcept;
+
+    private:
+        size_t m_size;
+        TType* m_data;
+    };
+}
+
+
+// ------------------------------------
+// "span.inl"
+
+
+namespace Aiva
+{
+    template <typename TType>
+    constexpr Span<TType>::Span() noexcept :
+        m_size{ 0 },
+        m_data{ nullptr }
+    {
+        //
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(size_t const size, TType& data) noexcept :
+        m_size{ size > 0 ? size : 0 },
+        m_data{ size > 0 ? &data : nullptr }
+    {
+        //
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(size_t const size, TType *const data) noexcept :
+        m_size{ size > 0 && data != nullptr ? size : 0 },
+        m_data{ size > 0 && data != nullptr ? data : nullptr }
+    {
+        //
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(TType& data) noexcept :
+        m_size{ 1 },
+        m_data{ &data }
+    {
+        //
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(TType *const data) noexcept :
+        m_size{ data ? 1 : 0 },
+        m_data{ data ? data : nullptr }
+    {
+        //
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::Span(nullptr_t const) noexcept :
+        m_size{ 0 },
+        m_data{ nullptr }
+    {
+        //
+    }
+
+
+    template <typename TType>
+    constexpr bool Span<TType>::IsEmpty() const noexcept
+    {
+        return m_size <= 0;
+    }
+
+
+    template <typename TType>
+    constexpr size_t Span<TType>::GetSize() const noexcept
+    {
+        return m_size;
+    }
+
+
+    template <typename TType>
+    constexpr TType& Span<TType>::GetDataRef() const noexcept
+    {
+        return *m_data;
+    }
+
+
+    template <typename TType>
+    constexpr TType* Span<TType>::GetDataPtr() const noexcept
+    {
+        return m_data;
+    }
+
+
+    template <typename TType>
+    constexpr Span<TType>::operator bool() const noexcept
+    {
+        return m_size > 0;
+    }
+
+
+    template <typename TType>
+    constexpr TType& Span<TType>::operator[](size_t const index) const noexcept
+    {
+        return m_data[index];
+    }
+}
+
+
+// ------------------------------------
 // "intrin.hpp"
 
 
